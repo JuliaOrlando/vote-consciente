@@ -1,0 +1,116 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model Usuario {
+  id               String        @id @default(uuid())
+  email            String?       @unique
+  perfilIdeologico String?       @map("perfil_ideologico")
+  dataCriacao      DateTime      @default(now()) @map("data_criacao")
+  votos            VotoUsuario[]
+
+  @@map("usuario")
+}
+
+model Proposicao {
+  id                Int               @id
+  numOficial        String            @map("num_oficial")
+  apelidoIa         String?           @map("apelido_ia")
+  ementaOficial     String            @map("ementa_oficial")
+  resumoCidadao     String?           @map("resumo_cidadao")
+  categoria         String?
+  rankingRelevancia Int               @default(0) @map("ranking_relevancia")
+  // Using Unsupported for pgvector type. Prisma supports it via raw queries.
+  embedding         Unsupported("vector(1536)")?
+  votosUsuarios     VotoUsuario[]
+  votosParlamentar  VotoParlamentar[]
+
+  @@map("proposicao")
+}
+
+model Parlamentar {
+  id             Int               @id
+  nomeEleitoral  String            @map("nome_eleitoral")
+  partido        String
+  uf             String
+  statusMandato  String            @map("status_mandato")
+  urlFoto        String?           @map("url_foto")
+  matchGlobal    Float?            @map("match_global")
+  votos          VotoParlamentar[]
+  despesas       Despesa[]
+  assiduidade    AssiduidadeParlamentar?
+  comissoes      CargoComissao[]
+
+  @@map("parlamentar")
+}
+
+model AssiduidadeParlamentar {
+  id                       String      @id @default(uuid())
+  parlamentarId            Int         @unique @map("parlamentar_id")
+  sessoesPresente         Int         @map("sessoes_presente")
+  faltasJustificadas       Int         @map("faltas_justificadas")
+  ausenciasNaoJustificadas Int         @map("ausencias_nao_justificadas")
+
+  parlamentar              Parlamentar @relation(fields: [parlamentarId], references: [id])
+
+  @@map("assiduidade_parlamentar")
+}
+
+model CargoComissao {
+  id            String      @id @default(uuid())
+  parlamentarId Int         @map("parlamentar_id")
+  orgao         String
+  siglaOrgao    String      @map("sigla_orgao")
+  tituloCargo   String      @map("titulo_cargo")
+  dataInicio    DateTime?   @map("data_inicio")
+
+  parlamentar   Parlamentar @relation(fields: [parlamentarId], references: [id])
+
+  @@map("cargo_comissao")
+}
+
+model VotoUsuario {
+  id           String     @id @default(uuid())
+  usuarioId    String     @map("usuario_id")
+  proposicaoId Int        @map("proposicao_id")
+  voto         String     // SIM, NAO, PULAR
+  dataVoto     DateTime   @default(now()) @map("data_voto")
+
+  usuario      Usuario    @relation(fields: [usuarioId], references: [id])
+  proposicao   Proposicao @relation(fields: [proposicaoId], references: [id])
+
+  @@unique([usuarioId, proposicaoId])
+  @@map("voto_usuario")
+}
+
+model VotoParlamentar {
+  id            String      @id @default(uuid())
+  parlamentarId Int         @map("parlamentar_id")
+  proposicaoId  Int         @map("proposicao_id")
+  voto          String      // SIM, NAO, ABSTENCAO, OBSTRUCAO
+  dataVoto      DateTime    @map("data_voto")
+
+  parlamentar   Parlamentar @relation(fields: [parlamentarId], references: [id])
+  proposicao    Proposicao  @relation(fields: [proposicaoId], references: [id])
+
+  @@unique([parlamentarId, proposicaoId])
+  @@map("voto_parlamentar")
+}
+
+model Despesa {
+  id            String      @id @default(uuid())
+  parlamentarId Int         @map("parlamentar_id")
+  tipoMesAno    String      @map("tipo_mes_ano")
+  valor         Float
+
+  parlamentar   Parlamentar @relation(fields: [parlamentarId], references: [id])
+
+  @@map("despesa")
+}

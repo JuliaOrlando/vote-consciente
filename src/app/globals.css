@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-outfit);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  /* Prevent bounce scroll on mobile for the "App" feel */
+  overscroll-behavior-y: none;
+}
