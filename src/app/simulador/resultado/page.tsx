@@ -1,149 +1,213 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, CheckCircle2, User, Trophy, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { AlertCircle, CheckCircle2, Loader2, Sparkles, Trophy, Users } from "lucide-react";
+import { Badge, EmptyState, SectionIntro, SurfaceCard, buttonStyles } from "@/components/ui";
+import { formatPercent } from "@/lib/utils";
+
+type RankingItem = {
+  id: number;
+  nome: string;
+  partido: string;
+  uf: string;
+  pontos: number;
+  amostra: number;
+};
+
+function MatchPhoto({ id, nome }: { id: number; nome: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-[color:var(--accent-strong)]">
+        <Users className="h-7 w-7" />
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={`https://www.camara.leg.br/internet/deputado/bandep/${id}.jpg`}
+      alt={`Foto de ${nome}`}
+      fill
+      sizes="56px"
+      className="object-cover object-top"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function ResultadoPage() {
-    const [ranking, setRanking] = useState<{ id: number, nome: string, partido: string, uf: string, pontos: number, amostra: number }[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [errorMsg, setErrorMsg] = useState("");
+  const [ranking, setRanking] = useState<RankingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [hasVotes, setHasVotes] = useState(true);
 
-    useEffect(() => {
-        const runEngine = async () => {
-            const votosRaw = localStorage.getItem("votosMatch");
-            if (!votosRaw) {
-                setErrorMsg("Nenhum voto registrado. Volte ao simulador.");
-                setLoading(false);
-                return;
-            }
+  useEffect(() => {
+    const runEngine = async () => {
+      const votosRaw = localStorage.getItem("votosMatch");
+      if (!votosRaw) {
+        setHasVotes(false);
+        setLoading(false);
+        return;
+      }
 
-            try {
-                const votos = JSON.parse(votosRaw);
-                const res = await fetch("/api/calc-match", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ votosCidadao: votos })
-                });
+      try {
+        const votos = JSON.parse(votosRaw);
+        const res = await fetch("/api/calc-match", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ votosCidadao: votos }),
+        });
 
-                if (!res.ok) {
-                    const errorObj = await res.json();
-                    throw new Error(errorObj.error || "Falha do Motor de Similaridade");
-                }
-
-                const data = await res.json();
-                setRanking(data.matches || []);
-            } catch (e: unknown) {
-                console.error(e);
-                if (e instanceof Error) {
-                    setErrorMsg(e.message);
-                } else {
-                    setErrorMsg(String(e));
-                }
-            } finally {
-                setLoading(false);
-            }
+        if (!res.ok) {
+          const errorObj = await res.json();
+          throw new Error(errorObj.error || "Falha do motor de similaridade");
         }
 
-        runEngine();
-    }, []);
+        const data = await res.json();
+        setRanking(data.matches || []);
+      } catch (error: unknown) {
+        console.error(error);
+        setErrorMsg(error instanceof Error ? error.message : String(error));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (loading) {
-        return (
-            <div className="flex flex-col min-h-screen items-center justify-center p-6 bg-slate-950">
-                <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
-                <h2 className="text-xl font-bold text-white font-display">Calculando Afinidade...</h2>
-                <p className="text-slate-400 mt-2 text-center text-sm">cruzando suas respostas com as atas oficiais da câmara.</p>
-            </div>
-        )
-    }
+    runEngine();
+  }, []);
 
-    if (errorMsg) {
-        return (
-            <div className="flex flex-col min-h-screen items-center justify-center p-6 bg-slate-950">
-                <h2 className="text-xl font-bold text-coral-500 font-display mb-4">Falha na Simulação</h2>
-                <p className="text-slate-400 mb-6">{errorMsg}</p>
-                <Link href="/simulador" className="px-6 py-3 bg-slate-800 text-white rounded-full hover:bg-slate-700">Refazer Simulação</Link>
-            </div>
-        )
-    }
-
+  if (loading) {
     return (
-        <div className="flex flex-col min-h-screen relative p-6 pb-12 bg-slate-950">
-            <header className="flex justify-between items-center mb-8 relative z-20">
-                <Link href="/simulador" onClick={() => localStorage.removeItem("votosMatch")} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">
-                    <ChevronLeft className="w-6 h-6 text-slate-400" />
-                </Link>
-                <div className="text-emerald-400 font-bold tracking-widest uppercase text-sm flex items-center gap-2">
-                    <Trophy className="w-4 h-4" /> Top Matches
-                </div>
-            </header>
-
-            <div className="text-center mb-10">
-                <h1 className="text-3xl font-bold font-display text-white mb-2">Representantes Ideais</h1>
-                <p className="text-slate-400 text-sm max-w-[280px] mx-auto">
-                    Cruzamos seus votos com as decisões em plenário. Estes deputados federais votariam como você.
-                </p>
-            </div>
-
-            <div className="space-y-4 flex-1">
-                {ranking.map((deputado, idx) => (
-                    <Link href={`/deputado/${deputado.id}`} key={deputado.id}>
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.05 }}
-                            className="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4 group transition-colors cursor-pointer relative overflow-hidden"
-                        >
-                            {/* Medalha p/ o Primeiro Lugar */}
-                            {idx === 0 && (
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-emerald-500/20 to-transparent -z-0" />
-                            )}
-
-                            <div className="relative">
-                                {/* API Image com Fallback */}
-                                <div className="w-14 h-14 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center overflow-hidden">
-                                    <img
-                                        src={`https://www.camara.leg.br/internet/deputado/bandep/${deputado.id}.jpg`}
-                                        className="w-full h-full object-cover"
-                                        alt={deputado.nome}
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<svg class="text-slate-500 w-8 h-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'; }}
-                                    />
-                                </div>
-
-                                {idx === 0 && (
-                                    <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-slate-800">
-                                        <CheckCircle2 className="w-3 h-3 text-slate-900" />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex-1 z-10">
-                                <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-                                    {deputado.nome}
-                                </h3>
-                                <span className="text-xs font-semibold tracking-wide text-slate-400">
-                                    {deputado.partido} - {deputado.uf}
-                                </span>
-                            </div>
-
-                            <div className="text-right z-10">
-                                <div className={`text-2xl font-black font-display ${deputado.pontos > 70 ? 'text-emerald-400' : deputado.pontos > 40 ? 'text-yellow-400' : 'text-coral-500'}`}>
-                                    {deputado.pontos}%
-                                </div>
-                                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                                    Afinidade
-                                </div>
-                            </div>
-                        </motion.div>
-                    </Link>
-                ))}
-            </div>
-
-            <div className="mt-8 text-center text-xs text-slate-600">
-                Os cálculos consideram as últimas votações processadas do portal Dados Abertos.
-            </div>
+      <SurfaceCard className="flex min-h-[70vh] flex-col items-center justify-center gap-4 text-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--accent)]" />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold text-[color:var(--ink)]">Calculando seu match</h1>
+          <p className="max-w-md text-sm leading-6 text-[color:var(--ink-muted)]">
+            Cruzando suas respostas com os registros de votação disponíveis.
+          </p>
         </div>
+      </SurfaceCard>
     );
+  }
+
+  if (!hasVotes) {
+    return (
+      <EmptyState
+        icon={Sparkles}
+        title="Seu match aparece depois da simulação"
+        description="Ainda não encontramos votos salvos neste navegador. Passe pelas votações simplificadas para gerar o ranking de afinidade."
+        action={
+          <Link href="/simulador" className={buttonStyles({ variant: "primary", size: "md" })}>
+            Iniciar votações
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <EmptyState
+        icon={AlertCircle}
+        title="Não foi possível calcular o match"
+        description={errorMsg}
+        action={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/simulador" className={buttonStyles({ variant: "secondary", size: "md" })}>
+              Refazer simulação
+            </Link>
+            <button
+              type="button"
+              onClick={() => localStorage.removeItem("votosMatch")}
+              className={buttonStyles({ variant: "ghost", size: "md" })}
+            >
+              Limpar respostas locais
+            </button>
+          </div>
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <SurfaceCard className="p-6 sm:p-8">
+        <SectionIntro
+          eyebrow="Meu Match"
+          title="Deputados mais alinhados com suas respostas"
+          description="O ranking abaixo compara seus votos com decisões reais em plenário. Use o resultado como ponto de partida e abra os perfis para verificar contexto, projetos e despesas."
+          action={
+            <Link href="/simulador" className={buttonStyles({ variant: "secondary", size: "md" })}>
+              Refazer votação
+            </Link>
+          }
+          className="mb-0"
+        />
+      </SurfaceCard>
+
+      <div className="space-y-4">
+        {ranking.map((deputado, index) => (
+          <Link key={deputado.id} href={`/deputado/${deputado.id}`} className="block">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <SurfaceCard className="transition-all hover:-translate-y-0.5 hover:bg-white">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--border)] bg-white text-sm font-semibold text-[color:var(--ink)]">
+                    {index + 1}
+                  </div>
+
+                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-[color:rgba(15,118,110,0.18)] bg-[color:var(--accent-soft)]">
+                    <MatchPhoto id={deputado.id} nome={deputado.nome} />
+                    {index === 0 ? (
+                      <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[color:var(--accent)] text-white">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-lg font-semibold text-[color:var(--ink)]">{deputado.nome}</h2>
+                        <p className="text-sm text-[color:var(--ink-muted)]">
+                          {deputado.partido} · {deputado.uf}
+                        </p>
+                      </div>
+                      <Badge tone={index === 0 ? "success" : deputado.pontos >= 50 ? "warning" : "neutral"}>
+                        {index === 0 ? (
+                          <>
+                            <Trophy className="h-3.5 w-3.5" />
+                            Melhor correspondência
+                          </>
+                        ) : (
+                          "Perfil comparável"
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="font-display text-3xl font-semibold text-[color:var(--ink)]">
+                      {formatPercent(deputado.pontos, 0)}
+                    </p>
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--ink-soft)]">
+                      Afinidade
+                    </p>
+                  </div>
+                </div>
+              </SurfaceCard>
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }

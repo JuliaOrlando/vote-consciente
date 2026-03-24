@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 
 export async function searchDeputados(
@@ -19,7 +20,7 @@ export async function searchDeputados(
         }
 
         // Banco populado: usa Prisma para busca rápida local
-        const whereClause: any = {}
+        const whereClause: Prisma.ParlamentarWhereInput = {}
 
         if (termo.length >= 2) {
             whereClause.OR = [
@@ -77,9 +78,22 @@ async function searchDeputadosAPI(
         if (!res.ok) throw new Error(`API error: ${res.status}`)
 
         const json = await res.json()
-        const dados = json.dados || []
+        type ApiDeputado = {
+            id: number
+            nome: string
+            siglaPartido: string
+            siglaUf: string
+            urlFoto?: string | null
+        }
 
-        const data = dados.map((d: any) => ({
+        type ApiLink = {
+            rel?: string
+            href?: string
+        }
+
+        const dados = (json.dados || []) as ApiDeputado[]
+
+        const data = dados.map((d) => ({
             id: d.id,
             nomeEleitoral: d.nome,
             partido: d.siglaPartido,
@@ -89,7 +103,7 @@ async function searchDeputadosAPI(
             matchGlobal: null,
         }))
 
-        const linkHeader = json.links?.find((l: any) => l.rel === 'last')?.href || ''
+        const linkHeader = ((json.links || []) as ApiLink[]).find((link) => link.rel === 'last')?.href || ''
         let total = skip + dados.length
         if (linkHeader) {
             const match = linkHeader.match(/pagina=(\d+)/)
@@ -102,4 +116,3 @@ async function searchDeputadosAPI(
         return { data: [], total: 0 }
     }
 }
-
