@@ -80,20 +80,20 @@ function SearchResultRow({ parlamentar }: { parlamentar: Parlamentar }) {
     <li>
       <Link
         href={`/deputado/${parlamentar.id}`}
-        className="group flex min-h-[88px] items-center gap-4 rounded-[24px] border border-[color:var(--border)] bg-white/86 p-4 transition-all hover:-translate-y-0.5 hover:border-[color:var(--border-strong)] hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]"
+        className="group flex min-h-[84px] items-center gap-4 rounded-[24px] border border-[color:var(--border)] bg-white/94 p-4 transition-all hover:-translate-y-0.5 hover:border-[color:var(--border-strong)] hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]"
       >
-        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-[color:rgba(15,118,110,0.16)] bg-[color:var(--accent-soft)]">
+        <div className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-[18px] border border-[color:rgba(13,107,100,0.16)] bg-[color:var(--accent-soft)]">
           {parlamentar.urlFoto ? (
             <Image
               src={parlamentar.urlFoto}
               alt={`Foto de ${parlamentar.nomeEleitoral}`}
               fill
-              sizes="56px"
+              sizes="52px"
               className="object-cover object-top"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[color:var(--accent-strong)]">
-              <Users2 className="h-6 w-6" />
+              <Users2 className="h-5 w-5" />
             </div>
           )}
         </div>
@@ -106,12 +106,12 @@ function SearchResultRow({ parlamentar }: { parlamentar: Parlamentar }) {
               </h3>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[color:var(--ink-muted)]">
                 <span className="inline-flex items-center gap-1.5">
-                  <Building2 className="h-4 w-4" />
+                  <Building2 className="h-3.5 w-3.5" />
                   Deputado federal
                 </span>
                 <span className="font-semibold text-[color:var(--ink)]">{parlamentar.partido}</span>
                 <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4" />
+                  <MapPin className="h-3.5 w-3.5" />
                   {parlamentar.uf}
                 </span>
               </div>
@@ -125,7 +125,7 @@ function SearchResultRow({ parlamentar }: { parlamentar: Parlamentar }) {
           </div>
         </div>
 
-        <span className="hidden h-11 min-w-11 items-center justify-center rounded-full border border-[color:var(--border)] bg-white text-[color:var(--ink-muted)] transition-colors group-hover:border-[color:rgba(15,118,110,0.2)] group-hover:text-[color:var(--accent-strong)] sm:flex">
+        <span className="hidden h-10 min-w-10 items-center justify-center rounded-full border border-[color:var(--border)] bg-white text-[color:var(--ink-muted)] transition-colors group-hover:border-[color:rgba(13,107,100,0.22)] group-hover:text-[color:var(--accent-strong)] sm:flex">
           <ArrowRight className="h-4 w-4" />
         </span>
       </Link>
@@ -201,14 +201,14 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
         className="mb-2"
       />
 
-      <SurfaceCard className="space-y-6 p-5 sm:p-6 lg:p-8">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+      <SurfaceCard className="space-y-6 p-5 sm:p-6 lg:p-7">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
           <fieldset className="space-y-3">
             <legend id="parlamentarian-search-title" className="sr-only">
               Busca de parlamentares
             </legend>
 
-            <div className="inline-flex w-full rounded-full border border-[color:var(--border)] bg-white/80 p-1 sm:w-auto">
+            <div className="inline-flex w-full rounded-full border border-[color:var(--border)] bg-white p-1 sm:w-auto">
               <button
                 type="button"
                 aria-pressed={casa === "deputados"}
@@ -220,8 +220,8 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                 className={cn(
                   "min-h-11 rounded-full border px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
                   casa === "deputados"
-                    ? "border-[color:var(--accent)] bg-[color:var(--accent)] text-white shadow-[0_16px_28px_-24px_rgba(15,118,110,0.9)] hover:bg-[color:var(--accent-strong)] hover:text-white"
-                    : "border-transparent bg-transparent text-[color:var(--ink-muted)] hover:bg-white hover:text-[color:var(--ink)]"
+                    ? "border-[color:var(--accent)] bg-[color:var(--accent)] text-white shadow-[0_14px_24px_-20px_rgba(13,107,100,0.7)] hover:bg-[color:var(--accent-strong)] hover:text-white"
+                    : "border-transparent bg-transparent text-[color:var(--ink-muted)] hover:bg-[color:rgba(13,107,100,0.06)] hover:text-[color:var(--ink)]"
                 )}
               >
                 Deputados
@@ -239,8 +239,8 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                 className={cn(
                   "min-h-11 rounded-full border px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
                   casa === "senadores"
-                    ? "border-[color:var(--accent)] bg-[color:var(--accent)] text-white shadow-[0_16px_28px_-24px_rgba(15,118,110,0.9)] hover:bg-[color:var(--accent-strong)] hover:text-white"
-                    : "border-transparent bg-transparent text-[color:var(--ink-muted)] hover:bg-white hover:text-[color:var(--ink)]"
+                    ? "border-[color:var(--accent)] bg-[color:var(--accent)] text-white shadow-[0_14px_24px_-20px_rgba(13,107,100,0.7)] hover:bg-[color:var(--accent-strong)] hover:text-white"
+                    : "border-transparent bg-transparent text-[color:var(--ink-muted)] hover:bg-[color:rgba(13,107,100,0.06)] hover:text-[color:var(--ink)]"
                 )}
               >
                 Senadores

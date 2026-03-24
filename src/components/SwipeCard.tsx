@@ -68,35 +68,35 @@ export function SwipeCard({ proposicao, onVote, isFront = true }: SwipeCardProps
             onDragEnd={handleDragEnd}
             animate={exitX !== 0 || y.get() !== 0 ? { x: exitX, y: y.get(), opacity: 0 } : { x: 0, y: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="absolute top-0 left-0 flex h-[30rem] w-full max-w-sm cursor-grab flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,251,249,0.94))] shadow-[0_40px_90px_-44px_rgba(16,42,37,0.4)] active:cursor-grabbing"
+            className="absolute top-0 left-0 flex h-[29rem] w-full max-w-sm cursor-grab flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,246,0.96))] shadow-[0_30px_72px_-40px_rgba(16,42,37,0.32)] active:cursor-grabbing"
         >
             {/* Indicadores de Voto (Overlay) */}
             <motion.div
                 style={{ opacity: overlayOpacity }}
-                className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-32 justify-between p-6"
+                className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-28 justify-between p-5"
             >
                 <motion.div
-                    className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[color:rgba(12,141,103,0.28)] bg-[color:rgba(12,141,103,0.12)] text-[color:var(--success-ink)] rotate-[-15deg]"
+                    className="flex h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-[color:rgba(12,141,103,0.28)] bg-[color:rgba(12,141,103,0.12)] text-[color:var(--success-ink)] rotate-[-15deg]"
                     style={{ opacity: useTransform(x, [0, 100], [0, 1]) }}
                 >
-                    <ThumbsUp size={32} />
+                    <ThumbsUp className="h-6 w-6" />
                 </motion.div>
 
                 <motion.div
-                    className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[color:rgba(176,57,38,0.28)] bg-[color:rgba(176,57,38,0.12)] text-[color:var(--danger-ink)] rotate-[15deg]"
+                    className="flex h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-[color:rgba(176,57,38,0.28)] bg-[color:rgba(176,57,38,0.12)] text-[color:var(--danger-ink)] rotate-[15deg]"
                     style={{ opacity: useTransform(x, [-100, 0], [1, 0]) }}
                 >
-                    <ThumbsDown size={32} />
+                    <ThumbsDown className="h-6 w-6" />
                 </motion.div>
             </motion.div>
 
             {/* Conteúdo do Card */}
-            <div className="flex flex-1 flex-col p-6 pt-12">
-                <div className="mb-6 inline-flex self-start rounded-full border border-[color:rgba(15,118,110,0.18)] bg-[color:var(--accent-soft)] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-strong)]">
+            <div className="flex flex-1 flex-col p-5 pt-10">
+                <div className="mb-5 inline-flex self-start rounded-full border border-[color:rgba(13,107,100,0.2)] bg-[color:var(--accent-soft)] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-strong)]">
                     {proposicao.categoria}
                 </div>
 
-                <h2 className="mb-4 font-display text-3xl font-semibold leading-tight text-[color:var(--ink)]">
+                <h2 className="mb-4 font-display text-[2rem] font-semibold leading-tight text-[color:var(--ink)]">
                     {proposicao.apelidoIa}
                 </h2>
 
@@ -105,29 +105,29 @@ export function SwipeCard({ proposicao, onVote, isFront = true }: SwipeCardProps
                 </p>
 
                 {/* Botões de Ação Manuais */}
-                <div className="mt-6 border-t border-[color:rgba(183,199,193,0.5)] pt-4">
+                <div className="mt-5 border-t border-[color:rgba(183,199,193,0.5)] pt-4">
                     <p className="mb-3 text-sm text-[color:var(--ink-soft)]">Arraste o cartão ou use os botões abaixo.</p>
                     <div className="flex justify-between gap-3">
                     <button
                         onClick={(e) => { e.stopPropagation(); handleManualVote("NAO"); }}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(176,57,38,0.2)] bg-[color:rgba(176,57,38,0.08)] px-4 py-3.5 font-semibold text-[color:var(--danger-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(176,57,38,0.12)]"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(176,57,38,0.22)] bg-[color:rgba(176,57,38,0.08)] px-4 py-3 font-semibold text-[color:var(--danger-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(176,57,38,0.12)]"
                     >
-                        <ThumbsDown className="h-5 w-5" />
+                        <ThumbsDown className="h-4 w-4" />
                         Discordo
                     </button>
 
                     <button
                         onClick={(e) => { e.stopPropagation(); handleManualVote("PULAR"); }}
-                        className="rounded-2xl border border-[color:var(--border)] bg-white px-5 py-3.5 text-sm font-medium text-[color:var(--ink-muted)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--border-strong)] hover:text-[color:var(--ink)]"
+                        className="rounded-2xl border border-[color:var(--border)] bg-white px-5 py-3 text-sm font-medium text-[color:var(--ink-muted)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--border-strong)] hover:text-[color:var(--ink)]"
                     >
                         Pular
                     </button>
 
                     <button
                         onClick={(e) => { e.stopPropagation(); handleManualVote("SIM"); }}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(12,141,103,0.2)] bg-[color:rgba(12,141,103,0.08)] px-4 py-3.5 font-semibold text-[color:var(--success-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(12,141,103,0.12)]"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(12,141,103,0.22)] bg-[color:rgba(12,141,103,0.08)] px-4 py-3 font-semibold text-[color:var(--success-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(12,141,103,0.12)]"
                     >
-                        <ThumbsUp className="h-5 w-5" />
+                        <ThumbsUp className="h-4 w-4" />
                         Concordo
                     </button>
                     </div>
