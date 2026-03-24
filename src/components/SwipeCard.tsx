@@ -15,9 +15,10 @@ interface SwipeCardProps {
     proposicao: Proposicao;
     onVote: (id: number, voto: "SIM" | "NAO" | "PULAR") => void;
     isFront?: boolean;
+    enableDrag?: boolean;
 }
 
-export function SwipeCard({ proposicao, onVote, isFront = true }: SwipeCardProps) {
+export function SwipeCard({ proposicao, onVote, isFront = true, enableDrag = true }: SwipeCardProps) {
     const [exitX, setExitX] = useState<number>(0);
     const x = useMotionValue(0);
 
@@ -63,12 +64,15 @@ export function SwipeCard({ proposicao, onVote, isFront = true }: SwipeCardProps
                 scale,
                 zIndex: isFront ? 10 : 0,
             }}
-            drag={isFront ? "x" : false}
+            drag={isFront && enableDrag ? "x" : false}
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-            onDragEnd={handleDragEnd}
+            onDragEnd={enableDrag ? handleDragEnd : undefined}
             animate={exitX !== 0 || y.get() !== 0 ? { x: exitX, y: y.get(), opacity: 0 } : { x: 0, y: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="absolute top-0 left-0 flex h-[29rem] w-full max-w-sm cursor-grab flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,246,0.96))] shadow-[0_30px_72px_-40px_rgba(16,42,37,0.32)] active:cursor-grabbing"
+            className={enableDrag
+                ? "absolute top-0 left-0 flex h-[29rem] w-full max-w-sm cursor-grab flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,246,0.96))] shadow-[0_30px_72px_-40px_rgba(16,42,37,0.32)] active:cursor-grabbing"
+                : "absolute top-0 left-0 flex h-[29rem] w-full max-w-sm flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,246,0.96))] shadow-[0_30px_72px_-40px_rgba(16,42,37,0.32)]"
+            }
         >
             {/* Indicadores de Voto (Overlay) */}
             <motion.div

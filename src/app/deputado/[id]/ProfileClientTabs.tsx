@@ -157,8 +157,8 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
   const projetosExibidos = expandProjetos ? projetosFiltrados : projetosFiltrados.slice(0, 6);
 
   return (
-    <div className="min-w-0 space-y-5">
-      <div className="sticky top-[4.75rem] z-20 overflow-x-auto rounded-[28px] border border-[color:var(--border)] bg-[color:rgba(247,244,236,0.88)] p-1.5 shadow-[0_20px_40px_-34px_rgba(16,42,37,0.45)] backdrop-blur md:top-4">
+    <div className="min-w-0 space-y-4 sm:space-y-5">
+      <div className="sticky top-[4.1rem] z-20 overflow-x-auto rounded-[24px] border border-[color:var(--border)] bg-[color:rgba(247,244,236,0.92)] p-1 shadow-[0_20px_40px_-34px_rgba(16,42,37,0.45)] backdrop-blur md:top-4 md:rounded-[28px] md:p-1.5">
         <div role="tablist" aria-label="Seções do perfil" className="flex min-w-max gap-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -173,7 +173,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
                 aria-controls={`panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "min-h-11 rounded-full px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
+                  "min-h-10 rounded-full px-3.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] md:min-h-11 md:px-4",
                   isActive
                     ? "bg-white text-[color:var(--ink)] shadow-[0_18px_32px_-24px_rgba(16,42,37,0.45)]"
                     : "text-[color:var(--ink-muted)] hover:bg-white/80 hover:text-[color:var(--ink)]"
@@ -194,7 +194,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
       >
         {activeTab === "overview" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-            <SurfaceCard className="min-w-0 space-y-5">
+            <SurfaceCard className="min-w-0 space-y-4 sm:space-y-5">
               <div className="space-y-2">
                 <p className="vc-eyebrow">Resumo do mandato</p>
                 <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Visão geral rápida</h2>
@@ -203,7 +203,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
                 </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 md:gap-4">
                 <MetricTile
                   icon={Sparkles}
                   label="Afinidade exibida"
@@ -235,7 +235,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
               </div>
             </SurfaceCard>
 
-            <div className="min-w-0 space-y-5">
+            <div className="min-w-0 space-y-4 sm:space-y-5">
               <SurfaceCard className="min-w-0 space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
@@ -249,7 +249,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
                   </Badge>
                 </div>
 
-                <div className="h-48 rounded-[24px] bg-[linear-gradient(180deg,rgba(216,239,232,0.35),rgba(255,255,255,0.35))] p-3">
+                <div className="h-44 rounded-[24px] bg-[linear-gradient(180deg,rgba(216,239,232,0.35),rgba(255,255,255,0.35))] p-3 sm:h-48">
                   <DespesasChart data={deputado.despesas || []} />
                 </div>
               </SurfaceCard>

@@ -64,13 +64,13 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
   const comissaoPrincipal = deputado.comissoes[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <BackButton />
 
       <SurfaceCard className="overflow-hidden p-0">
         <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="min-w-0 border-b border-[color:rgba(183,199,193,0.5)] bg-[linear-gradient(180deg,rgba(216,239,232,0.92),rgba(255,255,255,0.82))] p-6 sm:p-8 lg:border-b-0 lg:border-r">
-            <div className="flex flex-col items-start gap-5 sm:flex-row lg:flex-col">
+          <div className="min-w-0 border-b border-[color:rgba(183,199,193,0.5)] bg-[linear-gradient(180deg,rgba(216,239,232,0.92),rgba(255,255,255,0.82))] p-5 sm:p-7 lg:border-b-0 lg:border-r">
+            <div className="flex flex-col items-start gap-4 sm:flex-row lg:flex-col">
               <div className="relative h-28 w-28 overflow-hidden rounded-[28px] border border-[color:rgba(15,118,110,0.18)] bg-white shadow-[0_24px_48px_-30px_rgba(16,42,37,0.35)] sm:h-32 sm:w-32">
                 {deputado.urlFoto ? (
                   <Image
@@ -111,7 +111,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
             </div>
           </div>
 
-          <div className="min-w-0 space-y-6 p-6 sm:p-8">
+          <div className="min-w-0 space-y-5 p-5 sm:p-7">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
               <div className="min-w-0 space-y-3">
                 <h2 className="text-xl font-semibold text-[color:var(--ink)]">O que observar primeiro</h2>
@@ -148,7 +148,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricTile
                 icon={Receipt}
                 label="Gasto declarado"
