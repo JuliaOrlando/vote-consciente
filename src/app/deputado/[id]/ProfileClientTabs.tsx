@@ -157,7 +157,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
   const projetosExibidos = expandProjetos ? projetosFiltrados : projetosFiltrados.slice(0, 6);
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <div className="sticky top-[4.75rem] z-20 overflow-x-auto rounded-[28px] border border-[color:var(--border)] bg-[color:rgba(247,244,236,0.88)] p-1.5 shadow-[0_20px_40px_-34px_rgba(16,42,37,0.45)] backdrop-blur md:top-4">
         <div role="tablist" aria-label="Seções do perfil" className="flex min-w-max gap-1">
           {tabs.map((tab) => {
@@ -194,7 +194,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
       >
         {activeTab === "overview" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-            <SurfaceCard className="space-y-5">
+            <SurfaceCard className="min-w-0 space-y-5">
               <div className="space-y-2">
                 <p className="vc-eyebrow">Resumo do mandato</p>
                 <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Visão geral rápida</h2>
@@ -235,16 +235,18 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
               </div>
             </SurfaceCard>
 
-            <div className="space-y-5">
-              <SurfaceCard className="space-y-4">
+            <div className="min-w-0 space-y-5">
+              <SurfaceCard className="min-w-0 space-y-4">
                 <div className="flex items-center justify-between gap-4">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-[color:var(--ink-muted)]">Despesas recentes</p>
                     <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--ink)]">
                       {formatCurrency(totalDespesas)}
                     </h2>
                   </div>
-                  <Badge tone="neutral">{deputado._count?.despesas ?? deputado.despesas?.length ?? 0} registros agregados</Badge>
+                  <Badge tone="neutral" className="max-w-full shrink-0 self-start">
+                    {deputado._count?.despesas ?? deputado.despesas?.length ?? 0} registros agregados
+                  </Badge>
                 </div>
 
                 <div className="h-48 rounded-[24px] bg-[linear-gradient(180deg,rgba(216,239,232,0.35),rgba(255,255,255,0.35))] p-3">
@@ -252,9 +254,9 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
                 </div>
               </SurfaceCard>
 
-              <SurfaceCard className="space-y-4">
+              <SurfaceCard className="min-w-0 space-y-4">
                 <div className="flex items-center justify-between gap-4">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-[color:var(--ink-muted)]">Recibos mais recentes</p>
                     <h2 className="text-xl font-semibold text-[color:var(--ink)]">Leitura rápida</h2>
                   </div>

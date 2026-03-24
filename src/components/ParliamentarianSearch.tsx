@@ -208,7 +208,7 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
               Busca de parlamentares
             </legend>
 
-            <div className="inline-flex w-full rounded-full border border-[color:var(--border)] bg-white/70 p-1 sm:w-auto">
+            <div className="inline-flex w-full rounded-full border border-[color:var(--border)] bg-white/80 p-1 sm:w-auto">
               <button
                 type="button"
                 aria-pressed={casa === "deputados"}
@@ -218,10 +218,10 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                   setLoading(true);
                 }}
                 className={cn(
-                  "min-h-11 rounded-full px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
+                  "min-h-11 rounded-full border px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
                   casa === "deputados"
-                    ? "bg-[color:var(--accent)] text-white shadow-[0_16px_28px_-24px_rgba(15,118,110,0.9)]"
-                    : "text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]"
+                    ? "border-[color:var(--accent)] bg-[color:var(--accent)] text-white shadow-[0_16px_28px_-24px_rgba(15,118,110,0.9)] hover:bg-[color:var(--accent-strong)] hover:text-white"
+                    : "border-transparent bg-transparent text-[color:var(--ink-muted)] hover:bg-white hover:text-[color:var(--ink)]"
                 )}
               >
                 Deputados
@@ -237,10 +237,10 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                   setPage(1);
                 }}
                 className={cn(
-                  "min-h-11 rounded-full px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
+                  "min-h-11 rounded-full border px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
                   casa === "senadores"
-                    ? "bg-[color:var(--accent)] text-white shadow-[0_16px_28px_-24px_rgba(15,118,110,0.9)]"
-                    : "text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]"
+                    ? "border-[color:var(--accent)] bg-[color:var(--accent)] text-white shadow-[0_16px_28px_-24px_rgba(15,118,110,0.9)] hover:bg-[color:var(--accent-strong)] hover:text-white"
+                    : "border-transparent bg-transparent text-[color:var(--ink-muted)] hover:bg-white hover:text-[color:var(--ink)]"
                 )}
               >
                 Senadores

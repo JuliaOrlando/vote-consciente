@@ -102,13 +102,14 @@ textarea {
     color: var(--accent-strong);
   }
 
-  .vc-input {
+  .vc-input,
+  .vc-select {
     @apply min-h-12 w-full rounded-2xl border bg-white/90 px-4 py-3 text-base text-[color:var(--ink)] transition placeholder:text-[color:var(--ink-soft)] focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)];
     border-color: var(--border);
   }
 
   .vc-select {
-    @apply vc-input appearance-none pr-10;
+    @apply appearance-none pr-10;
   }
 
   .vc-table {

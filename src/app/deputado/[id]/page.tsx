@@ -69,7 +69,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
 
       <SurfaceCard className="overflow-hidden p-0">
         <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="border-b border-[color:rgba(183,199,193,0.5)] bg-[linear-gradient(180deg,rgba(216,239,232,0.92),rgba(255,255,255,0.82))] p-6 sm:p-8 lg:border-b-0 lg:border-r">
+          <div className="min-w-0 border-b border-[color:rgba(183,199,193,0.5)] bg-[linear-gradient(180deg,rgba(216,239,232,0.92),rgba(255,255,255,0.82))] p-6 sm:p-8 lg:border-b-0 lg:border-r">
             <div className="flex flex-col items-start gap-5 sm:flex-row lg:flex-col">
               <div className="relative h-28 w-28 overflow-hidden rounded-[28px] border border-[color:rgba(15,118,110,0.18)] bg-white shadow-[0_24px_48px_-30px_rgba(16,42,37,0.35)] sm:h-32 sm:w-32">
                 {deputado.urlFoto ? (
@@ -88,7 +88,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                 )}
               </div>
 
-              <div className="space-y-4">
+              <div className="min-w-0 space-y-4">
                 <div className="space-y-2">
                   <p className="vc-eyebrow">Perfil parlamentar</p>
                   <h1 className="font-display text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
@@ -111,9 +111,9 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
             </div>
           </div>
 
-          <div className="space-y-6 p-6 sm:p-8">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="space-y-3">
+          <div className="min-w-0 space-y-6 p-6 sm:p-8">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="min-w-0 space-y-3">
                 <h2 className="text-xl font-semibold text-[color:var(--ink)]">O que observar primeiro</h2>
                 <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
                   Aqui você encontra sinais centrais do mandato: afinidade com o usuário, presença em plenário, gastos declarados e atividade em comissões e projetos.
@@ -129,10 +129,10 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                 ) : null}
               </div>
 
-              <div className="vc-panel flex flex-col gap-3">
+              <div className="vc-panel min-w-0 flex flex-col gap-3">
                 <p className="text-sm font-medium text-[color:var(--ink-muted)]">Afinidade estimada</p>
-                <div className="flex items-end justify-between gap-4">
-                  <div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="min-w-0">
                     <p className="font-display text-5xl font-semibold leading-none text-[color:var(--ink)]">
                       {formatPercent(matchScore, 1)}
                     </p>
@@ -140,7 +140,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                       {deputado.matchGlobal ? "Baseado no cálculo disponível do app." : "Valor provisório até a simulação do usuário."}
                     </p>
                   </div>
-                  <Badge tone={getMatchTone(matchScore)}>
+                  <Badge tone={getMatchTone(matchScore)} className="max-w-full self-start">
                     <BadgeCheck className="h-3.5 w-3.5" />
                     {matchScore >= 75 ? "Alta afinidade" : matchScore >= 50 ? "Afinidade moderada" : "Baixa afinidade"}
                   </Badge>
