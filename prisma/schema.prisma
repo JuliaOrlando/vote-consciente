@@ -20,97 +20,118 @@ model Usuario {
 }
 
 model Proposicao {
-  id                Int               @id
-  numOficial        String            @map("num_oficial")
-  apelidoIa         String?           @map("apelido_ia")
-  ementaOficial     String            @map("ementa_oficial")
-  resumoCidadao     String?           @map("resumo_cidadao")
+  id                Int                          @id
+  siglaTipo         String                       @map("sigla_tipo")
+  numero            Int
+  ano               Int
+  numOficial        String                       @map("num_oficial")
+  dataApresentacao  DateTime?                    @map("data_apresentacao")
+  statusDescricao   String?                      @map("status_descricao")
+  idSituacao        Int?                         @map("id_situacao")
+  apelidoIa         String?                      @map("apelido_ia")
+  keywords          String?                      // Ex: "redução, jornada de trabalho, qualidade de vida"
+  ementaOficial     String                       @map("ementa_oficial")
+  resumoCidadao     String?                      @map("resumo_cidadao")
   categoria         String?
-  rankingRelevancia Int               @default(0) @map("ranking_relevancia")
+  rankingRelevancia Int                          @default(0) @map("ranking_relevancia")
   // Using Unsupported for pgvector type. Prisma supports it via raw queries.
   embedding         Unsupported("vector(1536)")?
   votosUsuarios     VotoUsuario[]
   votosParlamentar  VotoParlamentar[]
+  autores           ProposicaoAutor[]
 
   @@map("proposicao")
 }
 
 model Parlamentar {
-  id             Int               @id
-  nomeEleitoral  String            @map("nome_eleitoral")
-  partido        String
-  uf             String
-  statusMandato  String            @map("status_mandato")
-  urlFoto        String?           @map("url_foto")
-  matchGlobal    Float?            @map("match_global")
-  votos          VotoParlamentar[]
-  despesas       Despesa[]
-  assiduidade    AssiduidadeParlamentar?
-  comissoes      CargoComissao[]
+  id            Int                     @id
+  nomeEleitoral String                  @map("nome_eleitoral")
+  partido       String
+  uf            String
+  statusMandato String                  @map("status_mandato")
+  urlFoto       String?                 @map("url_foto")
+  matchGlobal   Float?                  @map("match_global")
+  votos         VotoParlamentar[]
+  despesas      Despesa[]
+  assiduidade   AssiduidadeParlamentar?
+  comissoes     CargoComissao[]
+  proposicoes   ProposicaoAutor[]
 
   @@map("parlamentar")
 }
 
-model AssiduidadeParlamentar {
-  id                       String      @id @default(uuid())
-  parlamentarId            Int         @unique @map("parlamentar_id")
-  sessoesPresente         Int         @map("sessoes_presente")
-  faltasJustificadas       Int         @map("faltas_justificadas")
-  ausenciasNaoJustificadas Int         @map("ausencias_nao_justificadas")
+model ProposicaoAutor {
+  id            String @id @default(uuid())
+  proposicaoId  Int    @map("proposicao_id")
+  parlamentarId Int    @map("parlamentar_id")
 
-  parlamentar              Parlamentar @relation(fields: [parlamentarId], references: [id])
+  proposicao  Proposicao  @relation(fields: [proposicaoId], references: [id])
+  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
+
+  @@unique([proposicaoId, parlamentarId])
+  @@map("proposicao_autor")
+}
+
+model AssiduidadeParlamentar {
+  id                       String @id @default(uuid())
+  parlamentarId            Int    @unique @map("parlamentar_id")
+  sessoesPresente          Int    @map("sessoes_presente")
+  faltasJustificadas       Int    @map("faltas_justificadas")
+  ausenciasNaoJustificadas Int    @map("ausencias_nao_justificadas")
+
+  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
 
   @@map("assiduidade_parlamentar")
 }
 
 model CargoComissao {
-  id            String      @id @default(uuid())
-  parlamentarId Int         @map("parlamentar_id")
+  id            String    @id @default(uuid())
+  parlamentarId Int       @map("parlamentar_id")
   orgao         String
-  siglaOrgao    String      @map("sigla_orgao")
-  tituloCargo   String      @map("titulo_cargo")
-  dataInicio    DateTime?   @map("data_inicio")
+  siglaOrgao    String    @map("sigla_orgao")
+  tituloCargo   String    @map("titulo_cargo")
+  dataInicio    DateTime? @map("data_inicio")
 
-  parlamentar   Parlamentar @relation(fields: [parlamentarId], references: [id])
+  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
 
   @@map("cargo_comissao")
 }
 
 model VotoUsuario {
-  id           String     @id @default(uuid())
-  usuarioId    String     @map("usuario_id")
-  proposicaoId Int        @map("proposicao_id")
-  voto         String     // SIM, NAO, PULAR
-  dataVoto     DateTime   @default(now()) @map("data_voto")
+  id           String   @id @default(uuid())
+  usuarioId    String   @map("usuario_id")
+  proposicaoId Int      @map("proposicao_id")
+  voto         String // SIM, NAO, PULAR
+  dataVoto     DateTime @default(now()) @map("data_voto")
 
-  usuario      Usuario    @relation(fields: [usuarioId], references: [id])
-  proposicao   Proposicao @relation(fields: [proposicaoId], references: [id])
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id])
+  proposicao Proposicao @relation(fields: [proposicaoId], references: [id])
 
   @@unique([usuarioId, proposicaoId])
   @@map("voto_usuario")
 }
 
 model VotoParlamentar {
-  id            String      @id @default(uuid())
-  parlamentarId Int         @map("parlamentar_id")
-  proposicaoId  Int         @map("proposicao_id")
-  voto          String      // SIM, NAO, ABSTENCAO, OBSTRUCAO
-  dataVoto      DateTime    @map("data_voto")
+  id            String   @id @default(uuid())
+  parlamentarId Int      @map("parlamentar_id")
+  proposicaoId  Int      @map("proposicao_id")
+  voto          String // SIM, NAO, ABSTENCAO, OBSTRUCAO
+  dataVoto      DateTime @map("data_voto")
 
-  parlamentar   Parlamentar @relation(fields: [parlamentarId], references: [id])
-  proposicao    Proposicao  @relation(fields: [proposicaoId], references: [id])
+  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
+  proposicao  Proposicao  @relation(fields: [proposicaoId], references: [id])
 
   @@unique([parlamentarId, proposicaoId])
   @@map("voto_parlamentar")
 }
 
 model Despesa {
-  id            String      @id @default(uuid())
-  parlamentarId Int         @map("parlamentar_id")
-  tipoMesAno    String      @map("tipo_mes_ano")
+  id            String @id @default(uuid())
+  parlamentarId Int    @map("parlamentar_id")
+  tipoMesAno    String @map("tipo_mes_ano")
   valor         Float
 
-  parlamentar   Parlamentar @relation(fields: [parlamentarId], references: [id])
+  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
 
   @@map("despesa")
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CalendarCheck, Briefcase, TrendingUp, AlertTriangle, FileText, ChevronDown, Award } from "lucide-react"
+import { CalendarCheck, Briefcase, TrendingUp, AlertTriangle, FileText, ChevronDown, Award, Search } from "lucide-react"
 import { DespesasChart } from "./chart-client"
 import { fetchProjetosAutorados, fetchDespesasDetalhadas } from "./actions"
 
@@ -10,6 +10,8 @@ export function ProfileClientTabs({ deputado }: { deputado: any }) {
     const [projetos, setProjetos] = useState<any[]>([])
     const [loadingProjetos, setLoadingProjetos] = useState(true)
     const [expandProjetos, setExpandProjetos] = useState(false)
+    const [filtroAprovadas, setFiltroAprovadas] = useState(false)
+    const [busca, setBusca] = useState("")
 
     const [despesasLista, setDespesasLista] = useState<any[]>([])
     const [loadingDespesas, setLoadingDespesas] = useState(true)
@@ -45,7 +47,26 @@ export function ProfileClientTabs({ deputado }: { deputado: any }) {
         { id: "assiduidade", label: "Assiduidade no Plenário", icon: CalendarCheck },
     ]
 
-    const projetosExibidos = expandProjetos ? projetos : projetos.slice(0, 5)
+    const projetosFiltrados = projetos.filter(p => {
+        let matchStatus = true;
+        if (filtroAprovadas) {
+            const status = p.statusProposicao?.descricaoSituacao?.toLowerCase() || p.ultimoStatus?.descricaoSituacao?.toLowerCase() || ''
+            matchStatus = status.includes('aprovad') || status.includes('transformado em norma') || status.includes('sancionad') || p.idSituacao === 1140
+        }
+        
+        let matchBusca = true;
+        const termo = busca.trim().toLowerCase();
+        if (termo !== '') {
+            const ementa = p.ementa?.toLowerCase() || '';
+            const keywords = p.keywords?.toLowerCase() || '';
+            const titulo = `${p.siglaTipo} ${p.numero}/${p.ano}`.toLowerCase();
+            matchBusca = ementa.includes(termo) || titulo.includes(termo) || keywords.includes(termo);
+        }
+        
+        return matchStatus && matchBusca;
+    })
+
+    const projetosExibidos = expandProjetos ? projetosFiltrados : projetosFiltrados.slice(0, 5)
 
     return (
         <div className="w-full">
@@ -75,15 +96,55 @@ export function ProfileClientTabs({ deputado }: { deputado: any }) {
                 {/* Projetos Tab */}
                 {activeTab === "projetos" && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        {/* Search Bar */}
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <Search className="w-5 h-5 text-slate-500" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Buscar por número (ex: PL 123) ou palavra-chave (ex: Educação)..."
+                                value={busca}
+                                onChange={(e) => {
+                                    setBusca(e.target.value);
+                                    if (e.target.value.trim() !== '') {
+                                        setExpandProjetos(true); // Auto expand if search is active
+                                    }
+                                }}
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm font-medium"
+                            />
+                        </div>
+
+                        {/* Filtro Toggle */}
+                        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                            <span className="text-white font-medium text-sm flex items-center gap-2">
+                                <Award className="w-4 h-4 text-emerald-500" />
+                                Mostrar apenas Aprovadas / Transformadas em Lei
+                            </span>
+                            <button 
+                                onClick={() => {
+                                    setFiltroAprovadas(!filtroAprovadas);
+                                    setExpandProjetos(false);
+                                }}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${filtroAprovadas ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filtroAprovadas ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+
                         {loadingProjetos ? (
                             <div className="flex justify-center py-10"><div className="w-8 h-8 rounded-full border-t-2 border-indigo-500 animate-spin" /></div>
-                        ) : projetos.length === 0 ? (
+                        ) : projetosFiltrados.length === 0 ? (
                             <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-8 text-center text-slate-500">
-                                Nenhum Projeto de Lei ou PEC de autoria encontrado no histórico da Câmara.
+                                Nenhum Projeto de Lei ou PEC {filtroAprovadas ? "aprovado " : ""}encontrado no histórico da Câmara.
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {projetosExibidos.map(p => (
+                                {projetosExibidos.map(p => {
+                                    const situacao = p.statusProposicao?.descricaoSituacao || p.ultimoStatus?.descricaoSituacao || "Em tramitação"
+                                    const isAprovado = situacao.toLowerCase().includes('aprovad') || situacao.toLowerCase().includes('transformado em norma') || situacao.toLowerCase().includes('sancionad') || p.idSituacao === 1140
+
+                                    return (
                                     <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-indigo-500/30 transition-colors">
                                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                             <div className="flex items-start gap-4">
@@ -91,7 +152,12 @@ export function ProfileClientTabs({ deputado }: { deputado: any }) {
                                                     <FileText className="w-5 h-5 text-indigo-400" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-white text-lg">{p.siglaTipo} {p.numero}/{p.ano}</h3>
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                                        <h3 className="font-bold text-white text-lg">{p.siglaTipo} {p.numero}/{p.ano}</h3>
+                                                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium w-fit ${isAprovado ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                                                            {situacao}
+                                                        </span>
+                                                    </div>
                                                     <p className="text-slate-300 mt-2 text-sm leading-relaxed">{p.ementa}</p>
                                                 </div>
                                             </div>
@@ -105,14 +171,15 @@ export function ProfileClientTabs({ deputado }: { deputado: any }) {
                                             </a>
                                         </div>
                                     </div>
-                                ))}
+                                    )
+                                })}
 
-                                {projetos.length > 5 && (
+                                {projetosFiltrados.length > 5 && (
                                     <button
                                         onClick={() => setExpandProjetos(!expandProjetos)}
                                         className="w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 transition-colors font-medium text-sm"
                                     >
-                                        {expandProjetos ? "Recolher Projetos" : `Ver mais ${projetos.length - 5} Projetos da Base`}
+                                        {expandProjetos ? "Recolher Projetos" : `Ver mais ${projetosFiltrados.length - 5} Projetos da Base`}
                                         <ChevronDown className={`w-4 h-4 transition-transform ${expandProjetos ? "rotate-180" : ""}`} />
                                     </button>
                                 )}

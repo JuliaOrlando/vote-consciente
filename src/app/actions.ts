@@ -1,11 +1,6 @@
 "use server"
 
-import { PrismaClient } from "@prisma/client"
-
-// Evita instanciar múltiplos clients em desenvolvimento
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
-const prisma = globalForPrisma.prisma || new PrismaClient()
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+import { prisma } from "@/lib/prisma"
 
 export async function searchDeputados(
     query: string = "",
@@ -17,7 +12,13 @@ export async function searchDeputados(
     try {
         const termo = query.trim()
 
-        // Constrói os filtros dinamicamente
+        // Se o banco tiver poucos dados (<100), usa a API da Câmara diretamente
+        const totalLocal = await prisma.parlamentar.count()
+        if (totalLocal < 100) {
+            return await searchDeputadosAPI(termo, estado, partido, skip, take)
+        }
+
+        // Banco populado: usa Prisma para busca rápida local
         const whereClause: any = {}
 
         if (termo.length >= 2) {
@@ -28,13 +29,8 @@ export async function searchDeputados(
             ]
         }
 
-        if (estado && estado !== "all") {
-            whereClause.uf = estado
-        }
-
-        if (partido && partido !== "all") {
-            whereClause.partido = partido
-        }
+        if (estado && estado !== "all") whereClause.uf = estado
+        if (partido && partido !== "all") whereClause.partido = partido
 
         const [data, total] = await Promise.all([
             prisma.parlamentar.findMany({
@@ -51,6 +47,59 @@ export async function searchDeputados(
         return { data, total }
     } catch (error) {
         console.error("Erro na busca de deputados:", error)
+        return await searchDeputadosAPI(query.trim(), estado, partido, skip, take)
+    }
+}
+
+async function searchDeputadosAPI(
+    termo: string,
+    estado: string,
+    partido: string,
+    skip: number,
+    take: number
+) {
+    try {
+        const page = Math.floor(skip / take) + 1
+        const params = new URLSearchParams({
+            ordem: 'ASC',
+            ordenarPor: 'nome',
+            itens: String(take),
+            pagina: String(page),
+        })
+
+        if (termo.length >= 2) params.set('nome', termo)
+        if (estado && estado !== "all") params.set('siglaUf', estado)
+        if (partido && partido !== "all") params.set('siglaPartido', partido)
+
+        const url = `https://dadosabertos.camara.leg.br/api/v2/deputados?${params.toString()}`
+        const res = await fetch(url, { next: { revalidate: 3600 } })
+
+        if (!res.ok) throw new Error(`API error: ${res.status}`)
+
+        const json = await res.json()
+        const dados = json.dados || []
+
+        const data = dados.map((d: any) => ({
+            id: d.id,
+            nomeEleitoral: d.nome,
+            partido: d.siglaPartido,
+            uf: d.siglaUf,
+            statusMandato: 'Ativo',
+            urlFoto: d.urlFoto || null,
+            matchGlobal: null,
+        }))
+
+        const linkHeader = json.links?.find((l: any) => l.rel === 'last')?.href || ''
+        let total = skip + dados.length
+        if (linkHeader) {
+            const match = linkHeader.match(/pagina=(\d+)/)
+            if (match) total = parseInt(match[1]) * take
+        }
+
+        return { data, total }
+    } catch (err) {
+        console.error("Erro na busca da API da Câmara:", err)
         return { data: [], total: 0 }
     }
 }
+
