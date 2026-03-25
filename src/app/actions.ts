@@ -1,6 +1,33 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
+
+const getCachedDeputadosDirectory = unstable_cache(
+    async () => {
+        const totalLocal = await prisma.parlamentar.count()
+
+        if (totalLocal < 100) {
+            return (await searchDeputadosAPI("", "all", "all", 0, 600)).data
+        }
+
+        return prisma.parlamentar.findMany({
+            orderBy: { nomeEleitoral: 'asc' }
+        })
+    },
+    ["deputados-directory-v1"],
+    { revalidate: 3600 }
+)
+
+export async function getDeputadosDirectory() {
+    try {
+        return await getCachedDeputadosDirectory()
+    } catch (error) {
+        console.error("Erro ao carregar diretório de deputados:", error)
+        return []
+    }
+}
 
 export async function searchDeputados(
     query: string = "",
@@ -19,7 +46,7 @@ export async function searchDeputados(
         }
 
         // Banco populado: usa Prisma para busca rápida local
-        const whereClause: any = {}
+        const whereClause: Prisma.ParlamentarWhereInput = {}
 
         if (termo.length >= 2) {
             whereClause.OR = [
@@ -77,9 +104,22 @@ async function searchDeputadosAPI(
         if (!res.ok) throw new Error(`API error: ${res.status}`)
 
         const json = await res.json()
-        const dados = json.dados || []
+        type ApiDeputado = {
+            id: number
+            nome: string
+            siglaPartido: string
+            siglaUf: string
+            urlFoto?: string | null
+        }
 
-        const data = dados.map((d: any) => ({
+        type ApiLink = {
+            rel?: string
+            href?: string
+        }
+
+        const dados = (json.dados || []) as ApiDeputado[]
+
+        const data = dados.map((d) => ({
             id: d.id,
             nomeEleitoral: d.nome,
             partido: d.siglaPartido,
@@ -89,7 +129,7 @@ async function searchDeputadosAPI(
             matchGlobal: null,
         }))
 
-        const linkHeader = json.links?.find((l: any) => l.rel === 'last')?.href || ''
+        const linkHeader = ((json.links || []) as ApiLink[]).find((link) => link.rel === 'last')?.href || ''
         let total = skip + dados.length
         if (linkHeader) {
             const match = linkHeader.match(/pagina=(\d+)/)
@@ -102,4 +142,3 @@ async function searchDeputadosAPI(
         return { data: [], total: 0 }
     }
 }
-

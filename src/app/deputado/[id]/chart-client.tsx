@@ -1,11 +1,7 @@
 "use client";
 
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-interface DespesaData {
-    mesAno: string;
-    valor: number;
-}
+import { formatCurrency } from "@/lib/utils";
 
 export function DespesasChart({ data }: { data: { tipoMesAno: string, valor: number }[] }) {
     // Transforma o Array do Prisma para agrupar e entender o gráfico
@@ -27,28 +23,33 @@ export function DespesasChart({ data }: { data: { tipoMesAno: string, valor: num
             <AreaChart data={formattedData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                 <defs>
                     <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#0f766e" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#0f766e" stopOpacity={0} />
                     </linearGradient>
                 </defs>
                 <XAxis
                     dataKey="mesAno"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    tick={{ fill: '#728681', fontSize: 11 }}
                     dy={10}
                 />
                 <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px' }}
-                    itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
-                    formatter={(value: number | string | undefined) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0))}
-                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    contentStyle={{
+                        backgroundColor: 'rgba(255,255,255,0.96)',
+                        borderColor: '#d7e0dc',
+                        borderRadius: '16px',
+                        boxShadow: '0 18px 50px -30px rgba(16,42,37,0.5)',
+                    }}
+                    itemStyle={{ color: '#0f766e', fontWeight: 'bold' }}
+                    formatter={(value: number | string | undefined) => formatCurrency(Number(value || 0))}
+                    labelStyle={{ color: '#55716c', marginBottom: '4px' }}
                 />
                 <Area
                     type="monotone"
                     dataKey="valor"
-                    stroke="#10b981"
-                    strokeWidth={3}
+                    stroke="#0f766e"
+                    strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorValor)"
                 />
