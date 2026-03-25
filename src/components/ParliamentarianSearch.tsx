@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { Parlamentar } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,9 +13,9 @@ import {
   Users2,
   Vote,
 } from "lucide-react";
-import { searchDeputados } from "@/app/actions";
 import { cn, formatPercent, getMatchTone } from "@/lib/utils";
 import { Badge, EmptyState, MetricTile, SectionIntro, SurfaceCard, buttonStyles } from "@/components/ui";
+import { getCachedDeputadosDirectory } from "@/lib/parliamentarians-cache";
 
 const UFS = [
   "AC",
@@ -72,6 +72,21 @@ const PARTIDOS = [
 ];
 
 type SearchVariant = "home" | "directory";
+
+async function fetchDeputadosDirectory() {
+  const response = await fetch("/api/deputados/directory");
+
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar diretório de deputados: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success || !Array.isArray(data.dados)) {
+    throw new Error("Resposta inválida ao carregar diretório de deputados.");
+  }
+
+  return data.dados as Parlamentar[];
+}
 
 function SearchResultRow({ parlamentar }: { parlamentar: Parlamentar }) {
   const hasMatch = typeof parlamentar.matchGlobal === "number";
@@ -138,36 +153,61 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
   const [query, setQuery] = useState("");
   const [estado, setEstado] = useState("all");
   const [partido, setPartido] = useState("all");
-  const [resultados, setResultados] = useState<Parlamentar[]>([]);
-  const [totalResults, setTotalResults] = useState(0);
+  const [deputados, setDeputados] = useState<Parlamentar[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
   const deferredQuery = useDeferredValue(query);
   const takeCount = 20;
-  const totalPages = Math.max(1, Math.ceil(totalResults / takeCount));
 
   useEffect(() => {
-    if (casa === "senadores") return;
-
     let ignore = false;
 
-    async function loadSearch() {
-      setLoading(true);
-      const skip = (page - 1) * takeCount;
-      const response = await searchDeputados(deferredQuery, estado, partido, skip, takeCount);
+    async function loadDirectory() {
+      try {
+        const response = await getCachedDeputadosDirectory(fetchDeputadosDirectory);
 
-      if (ignore) return;
-      setResultados(response.data);
-      setTotalResults(response.total);
-      setLoading(false);
+        if (ignore) return;
+        setDeputados(response);
+      } catch (error) {
+        console.error("Falha ao carregar diretório de deputados", error);
+        if (!ignore) {
+          setDeputados([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
     }
 
-    loadSearch();
+    loadDirectory();
     return () => {
       ignore = true;
     };
-  }, [casa, deferredQuery, estado, partido, page]);
+  }, []);
+
+  const deputadosFiltrados = useMemo(() => {
+    const termo = deferredQuery.trim().toLowerCase();
+
+    return deputados.filter((parlamentar) => {
+      if (estado !== "all" && parlamentar.uf !== estado) return false;
+      if (partido !== "all" && parlamentar.partido !== partido) return false;
+
+      if (termo.length < 2) return true;
+
+      const searchText = `${parlamentar.nomeEleitoral} ${parlamentar.partido} ${parlamentar.uf}`.toLowerCase();
+      return searchText.includes(termo);
+    });
+  }, [deferredQuery, deputados, estado, partido]);
+
+  const totalResults = deputadosFiltrados.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / takeCount));
+  const currentPage = Math.min(page, totalPages);
+  const resultados = useMemo(() => {
+    const skip = (currentPage - 1) * takeCount;
+    return deputadosFiltrados.slice(skip, skip + takeCount);
+  }, [currentPage, deputadosFiltrados]);
 
   const header =
     variant === "home"
@@ -215,7 +255,6 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                 onClick={() => {
                   setCasa("deputados");
                   setPage(1);
-                  setLoading(true);
                 }}
                 className={cn(
                   "min-h-11 rounded-full border px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
@@ -231,9 +270,6 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                 aria-pressed={casa === "senadores"}
                 onClick={() => {
                   setCasa("senadores");
-                  setResultados([]);
-                  setTotalResults(0);
-                  setLoading(false);
                   setPage(1);
                 }}
                 className={cn(
@@ -356,7 +392,7 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
           </div>
           {casa === "deputados" && totalResults > 0 ? (
             <p className="text-sm text-[color:var(--ink-soft)]">
-              Página {page} de {totalPages}
+              Página {currentPage} de {totalPages}
             </p>
           ) : null}
         </div>
@@ -397,16 +433,16 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    disabled={page === 1}
+                    onClick={() => setPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
                     className={buttonStyles({ variant: "secondary", size: "sm" })}
                   >
                     Anterior
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                    disabled={page === totalPages}
+                    onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
                     className={buttonStyles({ variant: "secondary", size: "sm" })}
                   >
                     Próxima

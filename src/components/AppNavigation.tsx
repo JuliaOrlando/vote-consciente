@@ -4,11 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChevronsLeft,
-  ChevronsRight,
   FileText,
   Home,
   Info,
+  Menu,
   Search,
   Sparkles,
   Vote,
@@ -138,32 +137,37 @@ export function AppNavigation() {
           <div
             id="desktop-nav-rail"
             className={cn(
-              "absolute inset-y-0 left-0 z-40 flex h-full w-[84px] flex-col overflow-hidden rounded-r-[28px] border-r border-[color:rgba(148,163,184,0.14)] bg-[color:rgba(243,239,228,0.9)] px-3 py-5 backdrop-blur transition-[width,padding,box-shadow,background-color] duration-150 ease-out",
-              isDesktopRailExpanded &&
-                "w-[236px] px-4 shadow-[0_28px_56px_-32px_rgba(16,42,37,0.4)]"
+              "absolute inset-y-0 left-0 z-40 flex h-full w-[84px] flex-col overflow-hidden rounded-r-[28px] border-r border-[color:rgba(148,163,184,0.14)] bg-[color:rgba(243,239,228,0.9)] px-3 py-5 backdrop-blur transition-[width,box-shadow] duration-150 ease-out motion-reduce:transition-none",
+              isDesktopRailExpanded && "w-[236px] shadow-[0_24px_46px_-30px_rgba(16,42,37,0.34)]"
             )}
           >
             <div className="flex w-full flex-col gap-8">
-              <div
-                className={cn(
-                  "flex",
-                  isDesktopRailExpanded
-                    ? "items-center justify-between gap-3"
-                    : "flex-col items-center gap-3"
-                )}
-              >
-                <Brand rail expanded={isDesktopRailExpanded} />
+              {isDesktopRailExpanded ? (
+                <div className="flex items-center justify-between gap-3">
+                  <Brand rail expanded />
+                  <button
+                    type="button"
+                    aria-controls="desktop-nav-rail"
+                    aria-expanded={isDesktopRailExpanded}
+                    aria-label={isDesktopRailExpanded ? "Recolher navegação" : "Expandir navegação"}
+                    onClick={() => setIsDesktopRailExpanded((current) => !current)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-[color:var(--border)] bg-white/94 text-[color:var(--ink-muted)] transition-colors hover:border-[color:rgba(13,107,100,0.18)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]"
+                  >
+                    <Menu className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
                   aria-controls="desktop-nav-rail"
                   aria-expanded={isDesktopRailExpanded}
                   aria-label={isDesktopRailExpanded ? "Recolher navegação" : "Expandir navegação"}
                   onClick={() => setIsDesktopRailExpanded((current) => !current)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-[color:var(--border)] bg-white/94 text-[color:var(--ink-muted)] transition-colors hover:border-[color:rgba(13,107,100,0.18)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]"
+                  className="mx-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-[color:var(--border)] bg-white/94 text-[color:var(--ink-muted)] transition-colors hover:border-[color:rgba(13,107,100,0.18)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]"
                 >
-                  {isDesktopRailExpanded ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+                  <Menu className="h-4 w-4" />
                 </button>
-              </div>
+              )}
 
               <nav aria-label="Navegação principal" className="flex flex-1 flex-col gap-2">
                 <NavigationLinks pathname={pathname} rail expanded={isDesktopRailExpanded} />

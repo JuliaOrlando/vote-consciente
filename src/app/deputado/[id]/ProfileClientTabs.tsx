@@ -11,7 +11,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { DespesasChart } from "./chart-client";
-import { fetchDespesasDetalhadas, fetchProjetosAutorados } from "./actions";
 import { Badge, EmptyState, MetricTile, SurfaceCard, buttonStyles } from "@/components/ui";
 import {
   cn,
@@ -87,6 +86,24 @@ function compactSummary(text?: string | null, length = 120) {
   return `${normalized.slice(0, length).trimEnd()}...`;
 }
 
+async function fetchDeputadoProfileData(deputadoId: number) {
+  const response = await fetch(`/api/deputados/${deputadoId}/profile-data`);
+
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar dados do deputado: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success || !data.dados) {
+    throw new Error("Resposta inválida ao carregar dados do deputado.");
+  }
+
+  return data.dados as {
+    projetos: ProjetoItem[];
+    despesas: DespesaDetalhada[];
+  };
+}
+
 export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData }) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [projetos, setProjetos] = useState<ProjetoItem[]>([]);
@@ -104,16 +121,24 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
       setLoadingProjetos(true);
       setLoadingDespesas(true);
 
-      const [listProjetos, listDespesas] = await Promise.all([
-        fetchProjetosAutorados(deputado.id),
-        fetchDespesasDetalhadas(deputado.id),
-      ]);
+      try {
+        const data = await fetchDeputadoProfileData(deputado.id);
 
-      if (ignore) return;
-      setProjetos(listProjetos);
-      setDespesasLista(listDespesas);
-      setLoadingProjetos(false);
-      setLoadingDespesas(false);
+        if (ignore) return;
+        setProjetos(data.projetos);
+        setDespesasLista(data.despesas);
+      } catch (error) {
+        console.error("Falha ao carregar dados complementares do deputado", error);
+        if (!ignore) {
+          setProjetos([]);
+          setDespesasLista([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingProjetos(false);
+          setLoadingDespesas(false);
+        }
+      }
     }
 
     loadData();

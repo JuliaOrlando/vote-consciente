@@ -2,13 +2,17 @@
 
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { ExternalLink, ThumbsUp, ThumbsDown } from "lucide-react";
+import { buttonStyles } from "@/components/ui";
 
 interface Proposicao {
     id: number;
-    apelidoIa: string;
-    resumoCidadao: string;
+    numOficial: string;
+    titulo: string;
+    resumoCidadao: string | null;
     categoria: string;
+    statusDescricao?: string | null;
+    urlOficial: string;
 }
 
 interface SwipeCardProps {
@@ -93,16 +97,39 @@ export function SwipeCard({ proposicao, onVote, isFront = true, enableDrag = tru
             {/* Conteúdo do Card */}
             <div className="flex flex-1 flex-col p-5 pt-10">
                 <div className="mb-5 inline-flex self-start rounded-full border border-[color:rgba(13,107,100,0.2)] bg-[color:var(--accent-soft)] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-strong)]">
-                    {proposicao.categoria}
+                    {proposicao.numOficial}
                 </div>
 
-                <h2 className="mb-4 font-display text-[2rem] font-semibold leading-tight text-[color:var(--ink)]">
-                    {proposicao.apelidoIa}
+                <div className="mb-5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex rounded-full border border-[color:var(--border)] bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
+                        {proposicao.categoria}
+                    </span>
+                    {proposicao.statusDescricao ? (
+                        <span className="inline-flex rounded-full border border-[color:var(--border)] bg-white px-4 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)]">
+                            {proposicao.statusDescricao}
+                        </span>
+                    ) : null}
+                </div>
+
+                <h2 className="mb-4 font-display text-[1.6rem] font-semibold leading-[1.12] text-[color:var(--ink)] sm:text-[1.85rem]">
+                    {proposicao.titulo}
                 </h2>
 
-                <p className="flex-1 overflow-y-auto pr-2 text-base leading-7 text-[color:var(--ink-muted)]">
-                    {proposicao.resumoCidadao}
-                </p>
+                {proposicao.resumoCidadao ? (
+                    <p className="flex-1 overflow-y-auto pr-2 text-base leading-7 text-[color:var(--ink-muted)]">
+                        {proposicao.resumoCidadao}
+                    </p>
+                ) : <div className="flex-1" />}
+
+                <a
+                    href={proposicao.urlOficial}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonStyles({ variant: "secondary", size: "sm", className: "mb-4 w-fit" })}
+                >
+                    Ler na Câmara
+                    <ExternalLink className="h-4 w-4" />
+                </a>
 
                 {/* Botões de Ação Manuais */}
                 <div className="mt-5 border-t border-[color:rgba(183,199,193,0.5)] pt-4">

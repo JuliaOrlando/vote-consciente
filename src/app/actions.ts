@@ -1,7 +1,33 @@
 "use server"
 
 import type { Prisma } from "@prisma/client"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
+
+const getCachedDeputadosDirectory = unstable_cache(
+    async () => {
+        const totalLocal = await prisma.parlamentar.count()
+
+        if (totalLocal < 100) {
+            return (await searchDeputadosAPI("", "all", "all", 0, 600)).data
+        }
+
+        return prisma.parlamentar.findMany({
+            orderBy: { nomeEleitoral: 'asc' }
+        })
+    },
+    ["deputados-directory-v1"],
+    { revalidate: 3600 }
+)
+
+export async function getDeputadosDirectory() {
+    try {
+        return await getCachedDeputadosDirectory()
+    } catch (error) {
+        console.error("Erro ao carregar diretório de deputados:", error)
+        return []
+    }
+}
 
 export async function searchDeputados(
     query: string = "",
