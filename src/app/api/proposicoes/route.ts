@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 const getCachedProposicoes = unstable_cache(
   async () =>
     prisma.proposicao.findMany({
+      where: {
+        autores: { some: {} },
+        votosParlamentar: { some: {} },
+      },
       select: {
         id: true,
         siglaTipo: true,
@@ -18,7 +22,7 @@ const getCachedProposicoes = unstable_cache(
       },
       orderBy: [{ rankingRelevancia: "desc" }, { ano: "desc" }, { id: "desc" }],
     }),
-  ["simulador-proposicoes-base-v1"],
+  ["simulador-proposicoes-base-v2"],
   { revalidate: 3600 }
 );
 
