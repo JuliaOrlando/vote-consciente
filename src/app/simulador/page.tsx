@@ -57,6 +57,15 @@ export default function SimuladorPage() {
   const isFinished = !loading && proposicoes.length === 0;
   const currentProposicao = proposicoes[proposicoes.length - 1] ?? null;
   const progresso = totalProposicoes === 0 ? 0 : Math.round((votosRealizados / totalProposicoes) * 100);
+  const remainingCount = Math.max(totalProposicoes - votosRealizados, 0);
+  const voteActionBase =
+    "flex min-h-14 flex-1 items-center justify-center gap-2 rounded-[22px] border px-5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] active:translate-y-px sm:text-base";
+  const disagreeButtonClass =
+    `${voteActionBase} border-[color:rgba(176,57,38,0.24)] bg-[linear-gradient(180deg,rgba(255,247,245,0.98),rgba(255,240,236,0.98))] text-[color:var(--danger-ink)] shadow-[0_18px_34px_-28px_rgba(176,57,38,0.42)] hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(255,241,237,1),rgba(255,232,227,1))]`;
+  const skipButtonClass =
+    `${voteActionBase} border-[color:var(--border-strong)] bg-white text-[color:var(--ink)] shadow-[0_18px_34px_-28px_rgba(16,42,37,0.18)] hover:-translate-y-0.5 hover:border-[color:rgba(13,107,100,0.18)] hover:bg-[color:rgba(255,255,255,0.98)]`;
+  const agreeButtonClass =
+    `${voteActionBase} border-[color:rgba(12,141,103,0.24)] bg-[linear-gradient(180deg,rgba(241,252,248,0.98),rgba(230,248,241,0.98))] text-[color:var(--success-ink)] shadow-[0_18px_34px_-28px_rgba(12,141,103,0.35)] hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(234,250,244,1),rgba(222,245,236,1))]`;
 
   const proposicoesFiltradas = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -70,6 +79,13 @@ export default function SimuladorPage() {
           .includes(term)
       );
   }, [proposicoes, searchTerm]);
+
+  const setVotingMode = (mode: "guided" | "browse") => {
+    setViewMode(mode);
+    if (mode === "guided") {
+      setSearchTerm("");
+    }
+  };
 
   useEffect(() => {
     if (isFinished && historicoVotos.length > 0) {
@@ -123,11 +139,11 @@ export default function SimuladorPage() {
   return (
     <div className="space-y-6">
       <SurfaceCard className="overflow-hidden p-6 sm:p-8">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-end">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-end">
           <SectionIntro
             eyebrow="Votações simplificadas"
             title="Como você votaria em proposições reais?"
-            description="No celular você pode usar o gesto de swipe. Em telas maiores, a interação principal é por clique, com uma proposição por vez e leitura mais estável."
+            description="Responda uma proposição por vez ou busque temas específicos. Suas respostas entram no cálculo do match."
             action={
               <Link href="/simulador/resultado" className={buttonStyles({ variant: "secondary", size: "lg" })}>
                 Ver meu match
@@ -136,26 +152,26 @@ export default function SimuladorPage() {
             className="mb-0"
           />
 
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
             <MetricTile
               icon={Vote}
-              label="Fluxo simples"
-              value="Concordo, discordo ou pulo"
-              description="A interface foi reduzida ao essencial para facilitar decisão em telas pequenas."
+              label="Sessão atual"
+              value={`${votosRealizados} resposta${votosRealizados === 1 ? "" : "s"}`}
+              description="Registre concordo, discordo ou pular em cada proposição."
               tone="primary"
             />
             <MetricTile
               icon={Sparkles}
               label="Progresso"
-              value={`${votosRealizados} voto${votosRealizados === 1 ? "" : "s"}`}
+              value={`${progresso}%`}
               description="As respostas ficam salvas localmente até o cálculo do ranking."
               tone="success"
             />
             <MetricTile
               icon={Layers}
-              label="Base usada"
-              value="Proposições reais"
-              description="Os cartões são carregados da base da aplicação sem mexer no algoritmo de match."
+              label="Fila restante"
+              value={proposicoes.length}
+              description="Proposições ainda disponíveis para esta sessão."
               tone="neutral"
             />
           </div>
@@ -163,7 +179,10 @@ export default function SimuladorPage() {
       </SurfaceCard>
 
       <SurfaceCard className="relative overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-x-6 top-6 h-40 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.12),transparent_70%)] blur-3xl" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-6 top-6 h-40 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.12),transparent_70%)] blur-3xl"
+        />
 
         {loading ? (
           <div className="flex min-h-[560px] flex-col items-center justify-center gap-4 text-center">
@@ -215,7 +234,8 @@ export default function SimuladorPage() {
                 <div className="inline-flex rounded-full border border-[color:var(--border)] bg-white p-1">
                   <button
                     type="button"
-                    onClick={() => setViewMode("guided")}
+                    aria-pressed={viewMode === "guided"}
+                    onClick={() => setVotingMode("guided")}
                     className={cn(
                       "min-h-10 rounded-full px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
                       viewMode === "guided"
@@ -227,7 +247,8 @@ export default function SimuladorPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setViewMode("browse")}
+                    aria-pressed={viewMode === "browse"}
+                    onClick={() => setVotingMode("browse")}
                     className={cn(
                       "min-h-10 rounded-full px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)]",
                       viewMode === "browse"
@@ -246,14 +267,14 @@ export default function SimuladorPage() {
                   <p className="max-w-2xl text-sm leading-6 text-[color:var(--ink-muted)]">
                     {viewMode === "guided"
                       ? isMobileViewport
-                        ? "No celular, o gesto de swipe continua disponível. Os botões também registram a decisão."
-                        : "No desktop, a interface prioriza leitura, botões claros e atalhos de teclado."
-                      : "Pesquise por tema, tipo ou resumo e registre o voto diretamente na lista sem mudar o fluxo do match."}
+                        ? "Deslize o cartão ou use os botões para registrar sua decisão."
+                        : "Use os botões ou o teclado para votar nesta proposição."
+                      : "Busque por tema, tipo ou resumo e vote direto na lista."}
                   </p>
                 </div>
               </div>
 
-              <div className="vc-panel flex min-w-0 flex-col gap-3 lg:min-w-[320px]">
+              <div className="vc-panel flex min-w-0 flex-col gap-3 xl:min-w-[320px]">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-[color:var(--ink-muted)]">Progresso da sessão</p>
                   <Badge tone="primary">{votosRealizados} de {totalProposicoes} respondidas</Badge>
@@ -267,30 +288,34 @@ export default function SimuladorPage() {
                 {!isMobileViewport && viewMode === "guided" ? (
                   <p className="inline-flex items-center gap-2 text-sm text-[color:var(--ink-soft)]">
                     <Keyboard className="h-4 w-4" />
-                    Atalhos: `A`/seta esquerda discorda, `D`/seta direita concorda, `S` ou espaço pula.
+                    Atalhos: A ou seta esquerda discorda, D ou seta direita concorda, S ou espaco pula.
                   </p>
                 ) : null}
               </div>
             </div>
 
-            {viewMode === "guided" ? (
-              isMobileViewport ? (
-                <div className="flex min-h-[620px] flex-col items-center justify-center gap-6">
-                  <div className="relative flex min-h-[520px] w-full items-center justify-center overflow-hidden rounded-[32px] border border-[color:rgba(183,199,193,0.5)] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(216,239,232,0.35))] px-4 py-8">
-                    <AnimatePresence mode="popLayout">
-                      {proposicoes.map((prop, index) => (
+            <div key={viewMode}>
+              {viewMode === "guided" ? (
+                isMobileViewport ? (
+                <div className="mx-auto flex w-full max-w-[26rem] flex-col items-center gap-4">
+                  <div className="relative flex h-[32rem] w-full items-center justify-center overflow-hidden rounded-[30px] border border-[color:rgba(183,199,193,0.5)] bg-[color:rgba(248,247,242,0.96)] px-3 py-4">
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-x-5 bottom-4 top-6 rounded-[30px] border border-[color:rgba(183,199,193,0.38)] bg-[color:rgba(246,248,246,1)]"
+                    />
+                    <AnimatePresence mode="wait">
+                      {currentProposicao ? (
                         <SwipeCard
-                          key={prop.id}
-                          proposicao={prop}
+                          key={currentProposicao.id}
+                          proposicao={currentProposicao}
                           onVote={handleVote}
-                          isFront={index === proposicoes.length - 1}
                           enableDrag
                         />
-                      ))}
+                      ) : null}
                     </AnimatePresence>
                   </div>
                 </div>
-              ) : currentProposicao ? (
+                ) : currentProposicao ? (
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
                   <SurfaceCard className="min-w-0 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-wrap items-center gap-2">
@@ -313,7 +338,7 @@ export default function SimuladorPage() {
                       <button
                         type="button"
                         onClick={() => handleVote(currentProposicao.id, "NAO")}
-                        className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(176,57,38,0.22)] bg-[color:rgba(176,57,38,0.08)] px-5 text-sm font-semibold text-[color:var(--danger-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(176,57,38,0.12)]"
+                        className={disagreeButtonClass}
                       >
                         <X className="h-4 w-4" />
                         Discordo
@@ -321,14 +346,14 @@ export default function SimuladorPage() {
                       <button
                         type="button"
                         onClick={() => handleVote(currentProposicao.id, "PULAR")}
-                        className={buttonStyles({ variant: "secondary", size: "lg", className: "sm:min-w-[150px]" })}
+                        className={cn(skipButtonClass, "sm:min-w-[160px]")}
                       >
                         Pular
                       </button>
                       <button
                         type="button"
                         onClick={() => handleVote(currentProposicao.id, "SIM")}
-                        className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(12,141,103,0.22)] bg-[color:rgba(12,141,103,0.08)] px-5 text-sm font-semibold text-[color:var(--success-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(12,141,103,0.12)]"
+                        className={agreeButtonClass}
                       >
                         <Check className="h-4 w-4" />
                         Concordo
@@ -339,24 +364,35 @@ export default function SimuladorPage() {
                   <div className="space-y-4">
                     <MetricTile
                       icon={Vote}
-                      label="Interação principal"
-                      value="Clique ou teclado"
-                      description="O desktop não depende de swipe. As ações ficam sempre visíveis."
+                      label="Restantes"
+                      value={remainingCount}
+                      description="Proposições ainda aguardando resposta nesta sessão."
                       tone="primary"
                     />
                     <MetricTile
                       icon={List}
-                      label="Próximo passo"
-                      value="Modo de busca"
-                      description="Se quiser comparar temas antes de votar, troque para buscar e explorar."
+                      label="Busca direta"
+                      value="Mudar de modo"
+                      description="Use Buscar e explorar para localizar um tema específico antes de votar."
                       tone="neutral"
                     />
                   </div>
                 </div>
-              ) : null
-            ) : (
+                ) : null
+              ) : (
               <div className="space-y-4">
                 <SurfaceCard className="space-y-4 p-5 sm:p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold text-[color:var(--ink)]">Buscar proposições</h3>
+                      <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
+                        Filtre a fila atual por tema, categoria ou resumo e vote direto na lista.
+                      </p>
+                    </div>
+                    <Badge tone="neutral">
+                      {proposicoesFiltradas.length} resultado{proposicoesFiltradas.length === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--ink-soft)]" />
                     <input
@@ -368,7 +404,7 @@ export default function SimuladorPage() {
                     />
                   </div>
                   <p className="text-sm text-[color:var(--ink-muted)]">
-                    {proposicoesFiltradas.length} proposição{proposicoesFiltradas.length === 1 ? "" : "ões"} disponível{proposicoesFiltradas.length === 1 ? "" : "is"} nesta sessão.
+                    {proposicoesFiltradas.length} proposição{proposicoesFiltradas.length === 1 ? "" : "ões"} disponível{proposicoesFiltradas.length === 1 ? "" : "is"} para explorar nesta sessão.
                   </p>
                 </SurfaceCard>
 
@@ -396,7 +432,7 @@ export default function SimuladorPage() {
                           <button
                             type="button"
                             onClick={() => handleVote(proposicao.id, "NAO")}
-                            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(176,57,38,0.22)] bg-[color:rgba(176,57,38,0.08)] px-4 text-sm font-semibold text-[color:var(--danger-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(176,57,38,0.12)]"
+                            className={disagreeButtonClass}
                           >
                             <X className="h-4 w-4" />
                             Discordo
@@ -404,14 +440,14 @@ export default function SimuladorPage() {
                           <button
                             type="button"
                             onClick={() => handleVote(proposicao.id, "PULAR")}
-                            className={buttonStyles({ variant: "secondary", size: "md", className: "sm:min-w-[120px]" })}
+                            className={cn(skipButtonClass, "sm:min-w-[136px]")}
                           >
                             Pular
                           </button>
                           <button
                             type="button"
                             onClick={() => handleVote(proposicao.id, "SIM")}
-                            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-[color:rgba(12,141,103,0.22)] bg-[color:rgba(12,141,103,0.08)] px-4 text-sm font-semibold text-[color:var(--success-ink)] transition-all hover:-translate-y-0.5 hover:bg-[color:rgba(12,141,103,0.12)]"
+                            className={agreeButtonClass}
                           >
                             <Check className="h-4 w-4" />
                             Concordo
@@ -422,7 +458,8 @@ export default function SimuladorPage() {
                   </div>
                 )}
               </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </SurfaceCard>

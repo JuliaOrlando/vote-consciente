@@ -21,11 +21,10 @@ interface SwipeCardProps {
 export function SwipeCard({ proposicao, onVote, isFront = true, enableDrag = true }: SwipeCardProps) {
     const [exitX, setExitX] = useState<number>(0);
     const x = useMotionValue(0);
+    const y = useMotionValue(0);
 
     // Mapeia a posição do card para rotação, opacidade e background color
-    const rotate = useTransform(x, [-200, 200], [-15, 15]);
-    const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
-    const scale = isFront ? 1 : 0.95;
+    const rotate = useTransform(x, [-200, 200], [-12, 12]);
     const overlayOpacity = useTransform(x, [-100, 0, 100], [1, 0, 1]);
 
     const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -46,13 +45,11 @@ export function SwipeCard({ proposicao, onVote, isFront = true, enableDrag = tru
             setExitX(-250);
             onVote(proposicao.id, "NAO");
         } else {
-            setExitX(0); // Optional: animação diferente pra Pular, ex: subir. Vou usar só desaparecer por agora, ou subir.
+            setExitX(0);
             y.set(-250);
             onVote(proposicao.id, "PULAR");
         }
     };
-
-    const y = useMotionValue(0);
 
     return (
         <motion.div
@@ -60,18 +57,17 @@ export function SwipeCard({ proposicao, onVote, isFront = true, enableDrag = tru
                 x,
                 y,
                 rotate,
-                opacity,
-                scale,
-                zIndex: isFront ? 10 : 0,
+                opacity: 1,
+                zIndex: 10,
             }}
             drag={isFront && enableDrag ? "x" : false}
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             onDragEnd={enableDrag ? handleDragEnd : undefined}
             animate={exitX !== 0 || y.get() !== 0 ? { x: exitX, y: y.get(), opacity: 0 } : { x: 0, y: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            transition={{ type: "spring", stiffness: 320, damping: 26 }}
             className={enableDrag
-                ? "absolute top-0 left-0 flex h-[29rem] w-full max-w-sm cursor-grab flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,246,0.96))] shadow-[0_30px_72px_-40px_rgba(16,42,37,0.32)] active:cursor-grabbing"
-                : "absolute top-0 left-0 flex h-[29rem] w-full max-w-sm flex-col overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,246,0.96))] shadow-[0_30px_72px_-40px_rgba(16,42,37,0.32)]"
+                ? "absolute inset-0 m-auto flex h-[29rem] w-[min(100%,24rem)] cursor-grab flex-col overflow-hidden rounded-[32px] border border-[color:rgba(183,199,193,0.72)] bg-white shadow-[0_16px_28px_-22px_rgba(16,42,37,0.16)] active:cursor-grabbing"
+                : "absolute inset-0 m-auto flex h-[29rem] w-[min(100%,24rem)] flex-col overflow-hidden rounded-[32px] border border-[color:rgba(183,199,193,0.72)] bg-white shadow-[0_16px_28px_-22px_rgba(16,42,37,0.16)]"
             }
         >
             {/* Indicadores de Voto (Overlay) */}

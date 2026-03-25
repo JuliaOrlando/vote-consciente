@@ -95,7 +95,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                     {deputado.nomeEleitoral}
                   </h1>
                   <p className="text-base leading-7 text-[color:var(--ink-muted)]">
-                    Deputado federal por {deputado.uf}, filiado ao {deputado.partido}. A página resume o mandato com foco em leitura rápida, contexto e comparação pública.
+                    Deputado federal por {deputado.uf}, filiado ao {deputado.partido}. Veja afinidade, presença, gastos e atuação recente em um só perfil.
                   </p>
                 </div>
 
@@ -114,9 +114,9 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
           <div className="min-w-0 space-y-5 p-5 sm:p-7">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
               <div className="min-w-0 space-y-3">
-                <h2 className="text-xl font-semibold text-[color:var(--ink)]">O que observar primeiro</h2>
+                <h2 className="text-xl font-semibold text-[color:var(--ink)]">Resumo do perfil</h2>
                 <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
-                  Aqui você encontra sinais centrais do mandato: afinidade com o usuário, presença em plenário, gastos declarados e atividade em comissões e projetos.
+                  Confira primeiro afinidade, presença em plenário, gastos declarados e atividade em comissões e projetos.
                 </p>
                 {comissaoPrincipal ? (
                   <div className="vc-panel">

@@ -199,7 +199,7 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
                 <p className="vc-eyebrow">Resumo do mandato</p>
                 <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Visão geral rápida</h2>
                 <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
-                  Esta área reúne os sinais mais úteis para uma primeira leitura: atividade institucional, últimos gastos publicados e indicadores de presença.
+                  Veja os principais números do mandato antes de abrir projetos, gastos e presença.
                 </p>
               </div>
 
@@ -302,9 +302,9 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <div className="space-y-3">
                   <p className="vc-eyebrow">Projetos e PECs</p>
-                  <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Produção legislativa organizada para leitura</h2>
+                  <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Projetos e PECs do parlamentar</h2>
                   <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
-                    Filtre por termo ou mostre somente propostas com andamento favorável. O texto abaixo preserva a situação oficial, mas destaca o que é essencial primeiro.
+                    Busque por termo ou filtre propostas aprovadas para localizar mais rápido o andamento que você quer consultar.
                   </p>
                 </div>
 

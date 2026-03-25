@@ -173,9 +173,9 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
     variant === "home"
       ? {
           eyebrow: "Busca de parlamentares",
-          title: "Encontre representantes com informação pública mais fácil de ler",
+          title: "Encontre parlamentares federais",
           description:
-            "Pesquise deputados por nome, partido ou estado. A visualização foi simplificada para destacar identidade, cargo e sinais essenciais do mandato.",
+            "Pesquise deputados por nome, partido ou estado e abra o perfil com gastos, presença, projetos e match quando disponível.",
         }
       : {
           eyebrow: "Diretório público",
