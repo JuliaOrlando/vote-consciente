@@ -18,15 +18,20 @@ import {
   X,
 } from "lucide-react";
 import { Badge, EmptyState, MetricTile, SectionIntro, SurfaceCard, buttonStyles } from "@/components/ui";
+import { useMatchSelection } from "@/hooks/useMatchSelection";
+import {
+  fetchProposicaoInspection,
+  readInspectionSessionCache,
+  writeInspectionSessionCache,
+} from "@/lib/proposicao-inspection-client";
 import { cn } from "@/lib/utils";
 import { getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
 import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
 
-const MATCH_SELECTION_STORAGE_KEY = "matchSelectedPropositions";
 const INITIAL_BROWSE_RENDER_COUNT = 80;
 const BROWSE_RENDER_STEP = 160;
-const MAX_PARTY_ROWS = 8;
-const MAX_INDIVIDUAL_VOTES_ROWS = 12;
+const CARD_PARTY_PREVIEW_ROWS = 8;
+const CARD_DEPUTY_PREVIEW_ROWS = 12;
 const INACTIVE_STATUS_KEYWORDS = [
   "arquiv",
   "rejeitad",
@@ -52,21 +57,6 @@ function isInactiveStatus(status: string | null) {
   return INACTIVE_STATUS_KEYWORDS.some((keyword) => normalizedStatus.includes(keyword));
 }
 
-function parseStoredSelection(value: string | null) {
-  if (!value) return [] as number[];
-
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item));
-  } catch {
-    return [];
-  }
-}
-
 async function fetchSimuladorCards() {
   const response = await fetch("/api/proposicoes");
 
@@ -82,32 +72,19 @@ async function fetchSimuladorCards() {
   return data.dados;
 }
 
-async function fetchProposicaoInspection(id: number): Promise<ProposicaoInspectionData> {
-  const response = await fetch(`/api/proposicoes/${id}/inspection`);
-
-  if (!response.ok) {
-    throw new Error(`Falha ao carregar inspecao da proposicao: ${response.status}`);
-  }
-
-  const data = await response.json();
-  if (!data.success || !data.dados) {
-    throw new Error("Resposta invalida ao carregar detalhes da votacao.");
-  }
-
-  return data.dados as ProposicaoInspectionData;
-}
-
 export default function SimuladorPage() {
   const [proposicoes, setProposicoes] = useState<SimuladorCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleBrowseCount, setVisibleBrowseCount] = useState(INITIAL_BROWSE_RENDER_COUNT);
   const [showOnlyActive, setShowOnlyActive] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [inspectedId, setInspectedId] = useState<number | null>(null);
   const [inspectionDataById, setInspectionDataById] = useState<Record<number, ProposicaoInspectionData>>({});
   const [inspectionErrorsById, setInspectionErrorsById] = useState<Record<number, string>>({});
+  const [expandedPartyPreviewById, setExpandedPartyPreviewById] = useState<Record<number, boolean>>({});
+  const [expandedDeputyPreviewById, setExpandedDeputyPreviewById] = useState<Record<number, boolean>>({});
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const { selectedIds, selectedSet, toggleSelection, clearSelection } = useMatchSelection();
 
   useEffect(() => {
     let active = true;
@@ -136,14 +113,8 @@ export default function SimuladorPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSelectedIds(parseStoredSelection(localStorage.getItem(MATCH_SELECTION_STORAGE_KEY)));
+    setInspectionDataById(readInspectionSessionCache());
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem(MATCH_SELECTION_STORAGE_KEY, JSON.stringify(selectedIds));
-  }, [selectedIds]);
-
-  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const proposicoesVisiveis = useMemo(
     () =>
@@ -193,10 +164,22 @@ export default function SimuladorPage() {
       .then((data) => {
         if (!active) return;
 
-        setInspectionDataById((prev) => ({
-          ...prev,
-          [inspectedProposicaoId]: data,
-        }));
+        setInspectionDataById((prev) => {
+          const next = {
+            ...prev,
+            [inspectedProposicaoId]: data,
+          };
+          writeInspectionSessionCache(next);
+          return next;
+        });
+
+        setInspectionErrorsById((prev) => {
+          if (!prev[inspectedProposicaoId]) return prev;
+
+          const next = { ...prev };
+          delete next[inspectedProposicaoId];
+          return next;
+        });
       })
       .catch((error) => {
         if (!active) return;
@@ -253,16 +236,12 @@ export default function SimuladorPage() {
   const partyBreakdown = inspectedVoteData?.partyBreakdown ?? [];
   const individualDeputyVotes = inspectedVoteData?.individualDeputyVotes ?? [];
   const maxVoteBreakdown = voteBreakdown[0]?.total ?? 1;
-
-  const toggleSelection = (id: number) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((currentId) => currentId !== id);
-      }
-
-      return [...prev, id];
-    });
-  };
+  const isExpandedPartyPreview =
+    inspectedProposicaoId !== null ? expandedPartyPreviewById[inspectedProposicaoId] ?? false : false;
+  const isExpandedDeputyPreview =
+    inspectedProposicaoId !== null ? expandedDeputyPreviewById[inspectedProposicaoId] ?? false : false;
+  const visiblePartyRows = isExpandedPartyPreview ? partyBreakdown.length : CARD_PARTY_PREVIEW_ROWS;
+  const visibleDeputyRows = isExpandedDeputyPreview ? individualDeputyVotes.length : CARD_DEPUTY_PREVIEW_ROWS;
 
   const retryInspectionDataLoad = (id: number) => {
     setInspectionErrorsById((prev) => {
@@ -290,7 +269,7 @@ export default function SimuladorPage() {
                 {selectedCount > 0 ? (
                   <button
                     type="button"
-                    onClick={() => setSelectedIds([])}
+                    onClick={clearSelection}
                     className={buttonStyles({ variant: "secondary", size: "lg" })}
                   >
                     Limpar lista
@@ -574,11 +553,19 @@ export default function SimuladorPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-[color:var(--ink)]">Dados nominais da votação</p>
-                      {inspectedVoteData?.totalDeputyVotes ? (
-                        <Badge tone="primary">{inspectedVoteData.totalDeputyVotes} votos registrados</Badge>
-                      ) : null}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/simulador/proposicao/${inspectedProposicao.id}`}
+                          className={buttonStyles({ variant: "secondary", size: "sm" })}
+                        >
+                          Ver detalhes completos do projeto
+                        </Link>
+                        {inspectedVoteData?.totalDeputyVotes ? (
+                          <Badge tone="primary">{inspectedVoteData.totalDeputyVotes} votos registrados</Badge>
+                        ) : null}
+                      </div>
                     </div>
 
                     {isLoadingInspectedVoteData && !inspectedVoteData ? (
@@ -641,36 +628,62 @@ export default function SimuladorPage() {
 
                         {partyBreakdown.length > 0 ? (
                           <div className="space-y-2">
-                            <p className="text-sm font-semibold text-[color:var(--ink)]">Distribuição por partido</p>
-                            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
-                              <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                                <thead>
-                                  <tr>
-                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                                      Partido
-                                    </th>
-                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                                      Votos
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {partyBreakdown.slice(0, MAX_PARTY_ROWS).map((row) => (
-                                    <tr key={row.partido}>
-                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                                        {row.partido}
-                                      </td>
-                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                                        {row.total} ({row.percentage}%)
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-[color:var(--ink)]">Distribuição por partido</p>
+                              {partyBreakdown.length > CARD_PARTY_PREVIEW_ROWS ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedPartyPreviewById((prev) => ({
+                                      ...prev,
+                                      [inspectedProposicao.id]: !isExpandedPartyPreview,
+                                    }))
+                                  }
+                                  className={buttonStyles({ variant: "ghost", size: "sm" })}
+                                >
+                                  {isExpandedPartyPreview ? "Mostrar resumo" : "Expandir no card"}
+                                </button>
+                              ) : null}
                             </div>
-                            {partyBreakdown.length > MAX_PARTY_ROWS ? (
+                            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
+                              <div
+                                className={cn(
+                                  isExpandedPartyPreview &&
+                                    partyBreakdown.length > CARD_PARTY_PREVIEW_ROWS &&
+                                    "vc-scroll-area max-h-64 overflow-y-auto"
+                                )}
+                              >
+                                <table className="w-full border-separate border-spacing-0 text-left text-sm">
+                                  <thead>
+                                    <tr>
+                                      <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                                        Partido
+                                      </th>
+                                      <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                                        Votos
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {partyBreakdown.slice(0, visiblePartyRows).map((row) => (
+                                      <tr key={row.partido}>
+                                        <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                          {row.partido}
+                                        </td>
+                                        <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                          {row.total} ({row.percentage}%)
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                            {partyBreakdown.length > CARD_PARTY_PREVIEW_ROWS ? (
                               <p className="text-xs text-[color:var(--ink-soft)]">
-                                + {partyBreakdown.length - MAX_PARTY_ROWS} partidos adicionais disponíveis na fonte.
+                                {isExpandedPartyPreview
+                                  ? "Rolagem habilitada para visualizar todos os partidos nesta prévia."
+                                  : `Mostrando ${CARD_PARTY_PREVIEW_ROWS} de ${partyBreakdown.length} partidos.`}
                               </p>
                             ) : null}
                           </div>
@@ -682,42 +695,68 @@ export default function SimuladorPage() {
 
                         {individualDeputyVotes.length > 0 ? (
                           <div className="space-y-2">
-                            <p className="text-sm font-semibold text-[color:var(--ink)]">Quem votou (amostra)</p>
-                            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
-                              <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                                <thead>
-                                  <tr>
-                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                                      Deputado
-                                    </th>
-                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                                      Partido/UF
-                                    </th>
-                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                                      Voto
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {individualDeputyVotes.slice(0, MAX_INDIVIDUAL_VOTES_ROWS).map((vote) => (
-                                    <tr key={`${vote.parlamentarId}-${vote.voto}`}>
-                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                                        {vote.nomeEleitoral}
-                                      </td>
-                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
-                                        {vote.partido}/{vote.uf}
-                                      </td>
-                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                                        {vote.voto}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-[color:var(--ink)]">Quem votou (amostra)</p>
+                              {individualDeputyVotes.length > CARD_DEPUTY_PREVIEW_ROWS ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedDeputyPreviewById((prev) => ({
+                                      ...prev,
+                                      [inspectedProposicao.id]: !isExpandedDeputyPreview,
+                                    }))
+                                  }
+                                  className={buttonStyles({ variant: "ghost", size: "sm" })}
+                                >
+                                  {isExpandedDeputyPreview ? "Mostrar resumo" : "Expandir no card"}
+                                </button>
+                              ) : null}
                             </div>
-                            {individualDeputyVotes.length > MAX_INDIVIDUAL_VOTES_ROWS ? (
+                            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
+                              <div
+                                className={cn(
+                                  isExpandedDeputyPreview &&
+                                    individualDeputyVotes.length > CARD_DEPUTY_PREVIEW_ROWS &&
+                                    "vc-scroll-area max-h-72 overflow-y-auto"
+                                )}
+                              >
+                                <table className="w-full border-separate border-spacing-0 text-left text-sm">
+                                  <thead>
+                                    <tr>
+                                      <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                                        Deputado
+                                      </th>
+                                      <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                                        Partido/UF
+                                      </th>
+                                      <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                                        Voto
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {individualDeputyVotes.slice(0, visibleDeputyRows).map((vote) => (
+                                      <tr key={`${vote.parlamentarId}-${vote.voto}`}>
+                                        <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                          {vote.nomeEleitoral}
+                                        </td>
+                                        <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
+                                          {vote.partido}/{vote.uf}
+                                        </td>
+                                        <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                          {vote.voto}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                            {individualDeputyVotes.length > CARD_DEPUTY_PREVIEW_ROWS ? (
                               <p className="text-xs text-[color:var(--ink-soft)]">
-                                Mostrando {MAX_INDIVIDUAL_VOTES_ROWS} de {individualDeputyVotes.length} votos nominais disponíveis.
+                                {isExpandedDeputyPreview
+                                  ? "Rolagem habilitada para visualizar todos os votos nominais nesta prévia."
+                                  : `Mostrando ${CARD_DEPUTY_PREVIEW_ROWS} de ${individualDeputyVotes.length} votos nominais.`}
                               </p>
                             ) : null}
                           </div>

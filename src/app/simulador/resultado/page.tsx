@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { Badge, EmptyState, MetricTile, SectionIntro, SurfaceCard, buttonStyles } from "@/components/ui";
+import { useMatchSelection } from "@/hooks/useMatchSelection";
 import { cn, formatPercent } from "@/lib/utils";
 import { getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
 
@@ -30,7 +31,6 @@ type RankingItem = {
   amostra: number;
 };
 
-const MATCH_SELECTION_STORAGE_KEY = "matchSelectedPropositions";
 const MATCH_VOTES_STORAGE_KEY = "votosMatch";
 
 const voteStatusLabel: Record<VoteValue, string> = {
@@ -52,21 +52,6 @@ function hasSummary(summary: string | null, title: string) {
   const normalizedTitle = title.trim().toLowerCase();
 
   return normalizedSummary.length > 0 && normalizedSummary !== normalizedTitle;
-}
-
-function parseStoredSelection(value: string | null) {
-  if (!value) return [] as number[];
-
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item));
-  } catch {
-    return [];
-  }
 }
 
 function parseStoredVotes(value: string | null) {
@@ -132,15 +117,14 @@ function MatchPhoto({ id, nome }: { id: number; nome: string }) {
 export default function ResultadoPage() {
   const [proposicoes, setProposicoes] = useState<SimuladorCard[]>([]);
   const [loadingProposicoes, setLoadingProposicoes] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [historicoVotos, setHistoricoVotos] = useState<Array<{ proposicaoId: number; voto: VoteValue }>>([]);
   const [activeProposicaoId, setActiveProposicaoId] = useState<number | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const { selectedIds, removeSelection } = useMatchSelection();
 
   useEffect(() => {
-    setSelectedIds(parseStoredSelection(localStorage.getItem(MATCH_SELECTION_STORAGE_KEY)));
     setHistoricoVotos(parseStoredVotes(localStorage.getItem(MATCH_VOTES_STORAGE_KEY)));
   }, []);
 
@@ -182,10 +166,6 @@ export default function ResultadoPage() {
 
     localStorage.setItem(MATCH_VOTES_STORAGE_KEY, JSON.stringify(historicoVotos));
   }, [historicoVotos]);
-
-  useEffect(() => {
-    localStorage.setItem(MATCH_SELECTION_STORAGE_KEY, JSON.stringify(selectedIds));
-  }, [selectedIds]);
 
   const votosPorProposicao = useMemo(
     () => new Map(historicoVotos.map(({ proposicaoId, voto }) => [proposicaoId, voto])),
@@ -243,7 +223,7 @@ export default function ResultadoPage() {
   };
 
   const removeFromSelection = (id: number) => {
-    setSelectedIds((prev) => prev.filter((item) => item !== id));
+    removeSelection(id);
     setHistoricoVotos((prev) => prev.filter((item) => item.proposicaoId !== id));
     setRanking([]);
     setErrorMsg("");
