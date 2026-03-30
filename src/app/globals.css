@@ -128,4 +128,28 @@ textarea {
     @apply border-b px-4 py-4 align-top text-sm;
     border-color: rgba(183, 199, 193, 0.5);
   }
+
+  .vc-scroll-area {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(13, 107, 100, 0.4) rgba(202, 213, 207, 0.45);
+  }
+
+  .vc-scroll-area::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .vc-scroll-area::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgba(202, 213, 207, 0.45);
+  }
+
+  .vc-scroll-area::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(13, 107, 100, 0.38);
+  }
+
+  .vc-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(13, 107, 100, 0.5);
+  }
 }

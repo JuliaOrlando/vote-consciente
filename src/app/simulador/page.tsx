@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  AlertCircle,
   BarChart3,
   Check,
   ExternalLink,
@@ -19,10 +20,13 @@ import {
 import { Badge, EmptyState, MetricTile, SectionIntro, SurfaceCard, buttonStyles } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
+import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
 
 const MATCH_SELECTION_STORAGE_KEY = "matchSelectedPropositions";
 const INITIAL_BROWSE_RENDER_COUNT = 80;
 const BROWSE_RENDER_STEP = 160;
+const MAX_PARTY_ROWS = 8;
+const MAX_INDIVIDUAL_VOTES_ROWS = 12;
 const INACTIVE_STATUS_KEYWORDS = [
   "arquiv",
   "rejeitad",
@@ -78,6 +82,21 @@ async function fetchSimuladorCards() {
   return data.dados;
 }
 
+async function fetchProposicaoInspection(id: number): Promise<ProposicaoInspectionData> {
+  const response = await fetch(`/api/proposicoes/${id}/inspection`);
+
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar inspecao da proposicao: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success || !data.dados) {
+    throw new Error("Resposta invalida ao carregar detalhes da votacao.");
+  }
+
+  return data.dados as ProposicaoInspectionData;
+}
+
 export default function SimuladorPage() {
   const [proposicoes, setProposicoes] = useState<SimuladorCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +105,8 @@ export default function SimuladorPage() {
   const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [inspectedId, setInspectedId] = useState<number | null>(null);
+  const [inspectionDataById, setInspectionDataById] = useState<Record<number, ProposicaoInspectionData>>({});
+  const [inspectionErrorsById, setInspectionErrorsById] = useState<Record<number, string>>({});
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
   useEffect(() => {
@@ -162,6 +183,37 @@ export default function SimuladorPage() {
   }, [inspectedId, proposicoes, proposicoesFiltradas]);
   const inspectedProposicaoId = inspectedProposicao?.id ?? null;
 
+  useEffect(() => {
+    if (inspectedProposicaoId === null) return;
+    if (inspectionDataById[inspectedProposicaoId] || inspectionErrorsById[inspectedProposicaoId]) return;
+
+    let active = true;
+
+    fetchProposicaoInspection(inspectedProposicaoId)
+      .then((data) => {
+        if (!active) return;
+
+        setInspectionDataById((prev) => ({
+          ...prev,
+          [inspectedProposicaoId]: data,
+        }));
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error(`Falha ao carregar dados de inspecao da proposicao ${inspectedProposicaoId}`, error);
+
+        setInspectionErrorsById((prev) => ({
+          ...prev,
+          [inspectedProposicaoId]:
+            error instanceof Error ? error.message : "Nao foi possivel carregar dados de inspecao desta votacao.",
+        }));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [inspectedProposicaoId, inspectionDataById, inspectionErrorsById]);
+
   const selectedProposicoes = useMemo(
     () => selectedIds.map((id) => proposicoes.find((proposicao) => proposicao.id === id)).filter(Boolean) as SimuladorCard[],
     [proposicoes, selectedIds]
@@ -194,6 +246,13 @@ export default function SimuladorPage() {
   const totalProposicoes = proposicoes.length;
   const visibleCount = proposicoesFiltradas.length;
   const selectedCount = selectedIds.length;
+  const inspectedVoteData = inspectedProposicaoId !== null ? inspectionDataById[inspectedProposicaoId] ?? null : null;
+  const inspectedVoteError = inspectedProposicaoId !== null ? inspectionErrorsById[inspectedProposicaoId] ?? "" : "";
+  const isLoadingInspectedVoteData = inspectedProposicaoId !== null && !inspectedVoteData && !inspectedVoteError;
+  const voteBreakdown = inspectedVoteData?.voteBreakdown ?? [];
+  const partyBreakdown = inspectedVoteData?.partyBreakdown ?? [];
+  const individualDeputyVotes = inspectedVoteData?.individualDeputyVotes ?? [];
+  const maxVoteBreakdown = voteBreakdown[0]?.total ?? 1;
 
   const toggleSelection = (id: number) => {
     setSelectedIds((prev) => {
@@ -202,6 +261,16 @@ export default function SimuladorPage() {
       }
 
       return [...prev, id];
+    });
+  };
+
+  const retryInspectionDataLoad = (id: number) => {
+    setInspectionErrorsById((prev) => {
+      if (!prev[id]) return prev;
+
+      const next = { ...prev };
+      delete next[id];
+      return next;
     });
   };
 
@@ -261,9 +330,9 @@ export default function SimuladorPage() {
       <SurfaceCard className="space-y-4 p-5 sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-[color:var(--ink)]">Painel da sessão de votações</h2>
+            <h2 className="text-xl font-semibold text-[color:var(--ink)]">Panorama do diretório de proposições</h2>
             <p className="text-sm text-[color:var(--ink-muted)]">
-              Distribuição das categorias mais frequentes na base visível.
+              Distribuição das categorias mais frequentes no catálogo atual (não representa resultado nominal).
             </p>
           </div>
           <Badge tone="neutral">
@@ -455,7 +524,10 @@ export default function SimuladorPage() {
               ) : null}
             </SurfaceCard>
 
-            <SurfaceCard as="aside" className="h-fit space-y-4 xl:sticky xl:top-4">
+            <SurfaceCard
+              as="aside"
+              className="vc-scroll-area max-h-[calc(100dvh-9rem)] space-y-4 overflow-y-auto pr-1.5 md:max-h-[calc(100dvh-8rem)] xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)]"
+            >
               {inspectedProposicao ? (
                 <>
                   <div className="space-y-2">
@@ -489,32 +561,179 @@ export default function SimuladorPage() {
                           </th>
                           <td className="px-3 py-2 font-medium text-[color:var(--ink)]">{relatedCategoryCount}</td>
                         </tr>
+                        <tr>
+                          <th scope="row" className="border-t border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                            Itens com mesma situação
+                          </th>
+                          <td className="border-t border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                            {inspectedProposicao.statusDescricao ? relatedStatusCount : "N/A"}
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
 
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-[color:var(--ink)]">Quebra de contexto da base atual</p>
-                    <div className="vc-panel space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[color:var(--ink-muted)]">Mesmo status</span>
-                        <span className="font-semibold text-[color:var(--ink)]">{relatedStatusCount}</span>
-                      </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
-                        <div
-                          className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--accent-strong))]"
-                          style={{
-                            width: `${Math.max(
-                              totalProposicoes === 0 ? 0 : (relatedStatusCount / totalProposicoes) * 100,
-                              relatedStatusCount > 0 ? 8 : 0
-                            )}%`,
-                          }}
-                        />
-                      </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-[color:var(--ink)]">Dados nominais da votação</p>
+                      {inspectedVoteData?.totalDeputyVotes ? (
+                        <Badge tone="primary">{inspectedVoteData.totalDeputyVotes} votos registrados</Badge>
+                      ) : null}
                     </div>
-                    <p className="text-xs leading-6 text-[color:var(--ink-soft)]">
-                      Votação nominal (quem votou e como votou) pode ser conferida na ficha oficial da Câmara para esta proposição.
-                    </p>
+
+                    {isLoadingInspectedVoteData && !inspectedVoteData ? (
+                      <div className="vc-panel flex items-center gap-3 text-sm text-[color:var(--ink-muted)]">
+                        <Loader2 className="h-4 w-4 animate-spin text-[color:var(--accent)]" />
+                        Carregando dados reais de votação nominal...
+                      </div>
+                    ) : null}
+
+                    {inspectedVoteError ? (
+                      <div className="vc-panel space-y-3">
+                        <div className="flex items-start gap-2 text-sm text-[color:var(--danger-ink)]">
+                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>{inspectedVoteError}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => retryInspectionDataLoad(inspectedProposicao.id)}
+                          className={buttonStyles({ variant: "secondary", size: "sm" })}
+                        >
+                          Tentar novamente
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {!isLoadingInspectedVoteData && !inspectedVoteError && inspectedVoteData ? (
+                      <div className="space-y-4">
+                        {voteBreakdown.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-sm font-semibold text-[color:var(--ink)]">Resultado geral da votação nominal</p>
+                            <div className="grid gap-2">
+                              {voteBreakdown.map((bucket) => (
+                                <div key={bucket.key} className="vc-panel space-y-2">
+                                  <div className="flex items-center justify-between gap-2 text-sm">
+                                    <span className="font-semibold text-[color:var(--ink)]">{bucket.label}</span>
+                                    <span className="text-[color:var(--ink-muted)]">
+                                      {bucket.total} ({bucket.percentage}%)
+                                    </span>
+                                  </div>
+                                  <div className="h-2.5 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
+                                    <div
+                                      className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--accent-strong))]"
+                                      style={{ width: `${Math.max((bucket.total / maxVoteBreakdown) * 100, 7)}%` }}
+                                    />
+                                  </div>
+                                  {bucket.key === "OUTROS" && bucket.rawValues.length > 0 ? (
+                                    <p className="text-xs text-[color:var(--ink-soft)]">
+                                      Valores fora do padrao: {bucket.rawValues.join(", ")}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
+                            Dados detalhados de resultado nominal indisponiveis para esta proposicao.
+                          </div>
+                        )}
+
+                        {partyBreakdown.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-sm font-semibold text-[color:var(--ink)]">Distribuição por partido</p>
+                            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
+                              <table className="w-full border-separate border-spacing-0 text-left text-sm">
+                                <thead>
+                                  <tr>
+                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                                      Partido
+                                    </th>
+                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                                      Votos
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {partyBreakdown.slice(0, MAX_PARTY_ROWS).map((row) => (
+                                    <tr key={row.partido}>
+                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                        {row.partido}
+                                      </td>
+                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                        {row.total} ({row.percentage}%)
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            {partyBreakdown.length > MAX_PARTY_ROWS ? (
+                              <p className="text-xs text-[color:var(--ink-soft)]">
+                                + {partyBreakdown.length - MAX_PARTY_ROWS} partidos adicionais disponíveis na fonte.
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
+                            Sem agregação por partido para esta proposição.
+                          </div>
+                        )}
+
+                        {individualDeputyVotes.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-sm font-semibold text-[color:var(--ink)]">Quem votou (amostra)</p>
+                            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
+                              <table className="w-full border-separate border-spacing-0 text-left text-sm">
+                                <thead>
+                                  <tr>
+                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                                      Deputado
+                                    </th>
+                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                                      Partido/UF
+                                    </th>
+                                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                                      Voto
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {individualDeputyVotes.slice(0, MAX_INDIVIDUAL_VOTES_ROWS).map((vote) => (
+                                    <tr key={`${vote.parlamentarId}-${vote.voto}`}>
+                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                        {vote.nomeEleitoral}
+                                      </td>
+                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
+                                        {vote.partido}/{vote.uf}
+                                      </td>
+                                      <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                        {vote.voto}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            {individualDeputyVotes.length > MAX_INDIVIDUAL_VOTES_ROWS ? (
+                              <p className="text-xs text-[color:var(--ink-soft)]">
+                                Mostrando {MAX_INDIVIDUAL_VOTES_ROWS} de {individualDeputyVotes.length} votos nominais disponíveis.
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
+                            Dados de votos individuais indisponiveis para esta proposição.
+                          </div>
+                        )}
+
+                        {!inspectedVoteData.availableData.groupedHistoricalVotes ? (
+                          <p className="text-xs leading-6 text-[color:var(--ink-soft)]">
+                            Histórico agrupado por sessão/fase não está disponível nesta fonte atual.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap gap-2">
