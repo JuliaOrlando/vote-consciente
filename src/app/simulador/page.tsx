@@ -437,11 +437,7 @@ export default function SimuladorPage() {
                           <h3 className="text-lg font-semibold leading-7 text-[color:var(--ink)]">{proposicao.titulo}</h3>
                           {hasSummary(proposicao.resumoCidadao, proposicao.titulo) ? (
                             <p className="text-sm leading-6 text-[color:var(--ink-muted)]">{proposicao.resumoCidadao}</p>
-                          ) : (
-                            <p className="text-sm leading-6 text-[color:var(--ink-soft)]">
-                              Resumo curto não disponível. Use a ficha oficial para leitura completa.
-                            </p>
-                          )}
+                          ) : null}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
