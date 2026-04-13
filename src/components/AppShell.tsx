@@ -1,5 +1,14 @@
+"use client";
+
 import type { ReactNode } from "react";
-import { AppNavigation } from "@/components/AppNavigation";
+import dynamic from "next/dynamic";
+
+// Carrega a navegação somente no cliente para evitar hydration mismatch
+// (a nav usa usePathname + useState que dependem do ambiente do browser)
+const AppNavigation = dynamic(
+  () => import("@/components/AppNavigation").then((m) => ({ default: m.AppNavigation })),
+  { ssr: false }
+);
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
