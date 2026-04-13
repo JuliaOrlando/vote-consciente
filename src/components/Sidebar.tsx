@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, BarChart2, Info, UserCheck, ShieldCheck } from "lucide-react";
+import { Home, BarChart2, Info, UserCheck, ShieldCheck } from "lucide-react";
 
 export function Sidebar() {
     const pathname = usePathname();
