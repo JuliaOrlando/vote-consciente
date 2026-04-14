@@ -23,6 +23,13 @@ import {
 import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
 import { buildOfficialPropositionUrl, getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
 import { cn } from "@/lib/utils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+
+const PIE_COLORS = [
+  "#0d6b64", "#0f766e", "#14b8a6", "#5eead4", 
+  "#b7c7c1", "#8e9c97", "#b45309", "#d97706", 
+  "#f59e0b", "#fbca14"
+];
 
 const MAX_TABLE_SCROLL_HEIGHT = "max-h-[26rem]";
 
@@ -84,6 +91,7 @@ export default function ProposicaoDetailPage() {
   const [inspectionError, setInspectionError] = useState("");
   const [loadingInspection, setLoadingInspection] = useState(true);
   const [inspectionLoadSeed, setInspectionLoadSeed] = useState(0);
+  const [deputySearchTerm, setDeputySearchTerm] = useState("");
   const { selectedSet, toggleSelection } = useMatchSelection();
 
   useEffect(() => {
@@ -179,6 +187,14 @@ export default function ProposicaoDetailPage() {
   const partyBreakdown = inspectionData?.partyBreakdown ?? [];
   const individualDeputyVotes = inspectionData?.individualDeputyVotes ?? [];
   const maxVoteBreakdown = voteBreakdown[0]?.total ?? 1;
+
+  const filteredDeputyVotes = useMemo(() => {
+    if (!deputySearchTerm.trim()) return individualDeputyVotes;
+    const term = deputySearchTerm.trim().toLowerCase();
+    return individualDeputyVotes.filter((v) =>
+      v.nomeEleitoral.toLowerCase().includes(term) || v.partido.toLowerCase().includes(term)
+    );
+  }, [individualDeputyVotes, deputySearchTerm]);
 
   if (!isValidId) {
     return (
@@ -328,33 +344,36 @@ export default function ProposicaoDetailPage() {
             )}
 
             {partyBreakdown.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-[color:var(--ink)]">Distribuição por partido</h3>
-                <div className={cn("vc-scroll-area overflow-auto rounded-2xl border border-[color:rgba(183,199,193,0.5)]", MAX_TABLE_SCROLL_HEIGHT)}>
-                  <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                    <thead>
-                      <tr>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                          Partido
-                        </th>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                          Votos
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {partyBreakdown.map((row) => (
-                        <tr key={row.partido}>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                            {row.partido}
-                          </td>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                            {row.total} ({row.percentage}%)
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="h-[280px] rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <RechartsTooltip
+                        formatter={(value: number, name: string, props: any) => [
+                          `${value} votos (${props.payload.percentage}%)`,
+                          name,
+                        ]}
+                        contentStyle={{ borderRadius: "12px", border: "1px solid rgba(183,199,193,0.5)", fontSize: "14px", backgroundColor: "#fff" }}
+                        itemStyle={{ color: "var(--ink)" }}
+                      />
+                      <Pie
+                        data={partyBreakdown}
+                        dataKey="total"
+                        nameKey="partido"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        stroke="none"
+                      >
+                        {partyBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             ) : (
@@ -364,39 +383,58 @@ export default function ProposicaoDetailPage() {
             )}
 
             {individualDeputyVotes.length > 0 ? (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-[color:var(--ink)]">Votos individuais dos parlamentares</h3>
-                <div className="vc-scroll-area max-h-[38rem] overflow-auto rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
-                  <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                    <thead>
-                      <tr>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                          Deputado
-                        </th>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                          Partido/UF
-                        </th>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                          Voto
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {individualDeputyVotes.map((vote) => (
-                        <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                            {vote.nomeEleitoral}
-                          </td>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
-                            {vote.partido}/{vote.uf}
-                          </td>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                            {vote.voto}
-                          </td>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-lg font-semibold text-[color:var(--ink)]">Votos individuais dos parlamentares</h3>
+                  <input
+                    type="search"
+                    placeholder="Buscar por deputado(a) ou partido"
+                    value={deputySearchTerm}
+                    onChange={(e) => setDeputySearchTerm(e.target.value)}
+                    className="vc-input max-w-sm"
+                  />
+                </div>
+                <div className="flex max-h-[38rem] flex-col overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white">
+                  <div className="vc-scroll-area flex-1 overflow-y-auto">
+                    <table className="w-full border-separate border-spacing-0 text-left text-sm">
+                      <thead className="sticky top-0 bg-white/95 backdrop-blur-sm">
+                        <tr>
+                          <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                            Deputado
+                          </th>
+                          <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                            Partido/UF
+                          </th>
+                          <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                            Voto
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredDeputyVotes.length > 0 ? (
+                          filteredDeputyVotes.map((vote) => (
+                            <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
+                              <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                {vote.nomeEleitoral}
+                              </td>
+                              <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
+                                {vote.partido}/{vote.uf}
+                              </td>
+                              <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                {vote.voto}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-8 text-center text-[color:var(--ink-muted)]">
+                              Nenhum deputado encontrado para "{deputySearchTerm}".
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             ) : (

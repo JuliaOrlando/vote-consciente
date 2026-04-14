@@ -346,10 +346,10 @@ export default function ResultadoPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-        <SurfaceCard className="min-w-0 space-y-5 p-5 sm:p-6">
+        <SurfaceCard className="flex min-w-0 flex-col p-5 sm:p-6 xl:min-h-[28rem]">
           {activeProposicao ? (
             <>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2">
                 <Badge tone="primary">{activeProposicao.numOficial}</Badge>
                 <Badge tone="neutral">{activeProposicao.categoria}</Badge>
                 <Badge tone="neutral">
@@ -358,21 +358,29 @@ export default function ResultadoPage() {
                 {activeProposicao.statusDescricao ? <Badge tone="neutral">{activeProposicao.statusDescricao}</Badge> : null}
               </div>
 
-              <div className="space-y-3">
-                <h2 className="font-display text-3xl font-semibold tracking-tight text-[color:var(--ink)]">
+              <div className="mb-5 flex-1 space-y-3">
+                <h2 className="font-display text-xl sm:text-2xl font-semibold leading-snug tracking-tight text-[color:var(--ink)]">
                   {activeProposicao.titulo}
                 </h2>
                 {hasSummary(activeProposicao.resumoCidadao, activeProposicao.titulo) ? (
-                  <p className="text-base leading-7 text-[color:var(--ink-muted)]">{activeProposicao.resumoCidadao}</p>
+                  <p className="text-sm leading-6 text-[color:var(--ink-muted)]">{activeProposicao.resumoCidadao}</p>
                 ) : null}
-                <a
-                  href={activeProposicao.urlOficial}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={buttonStyles({ variant: "secondary", size: "sm", className: "w-fit" })}
-                >
-                  Ver ficha oficial
-                </a>
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <Link
+                    href={`/simulador/proposicao/${activeProposicao.id}`}
+                    className={buttonStyles({ variant: "secondary", size: "sm" })}
+                  >
+                    Ver detalhes do projeto
+                  </Link>
+                  <a
+                    href={activeProposicao.urlOficial}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonStyles({ variant: "ghost", size: "sm" })}
+                  >
+                    Ficha oficial da Câmara
+                  </a>
+                </div>
               </div>
 
               {/* Quando todos os itens foram votados, exibe banner de conclusão */}
@@ -425,15 +433,17 @@ export default function ResultadoPage() {
           )}
         </SurfaceCard>
 
-        <SurfaceCard className="space-y-4 p-4 sm:p-5">
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-[color:var(--ink)]">Fila do Meu Match</h2>
-            <p className="text-sm text-[color:var(--ink-muted)]">
-              Selecione um item para votar ou revisar sua resposta atual.
-            </p>
-          </div>
+        <div className="relative flex h-full min-h-[460px] flex-col xl:min-h-0">
+          <SurfaceCard className="flex flex-col p-4 sm:p-5 xl:absolute xl:inset-0">
+            <div className="mb-4 shrink-0 space-y-2 border-b border-[color:var(--border)] pb-4">
+              <h2 className="text-xl font-semibold text-[color:var(--ink)]">Fila do Meu Match</h2>
+              <p className="text-sm text-[color:var(--ink-muted)]">
+                Selecione um item para votar ou revisar sua resposta atual.
+              </p>
+            </div>
 
-          <ul className="space-y-2">
+            <div className="vc-scroll-area flex-1 overflow-y-auto pr-2">
+              <ul className="space-y-2">
             {selectedProposicoes.map((proposicao) => {
               const votoRegistrado = votosPorProposicao.get(proposicao.id);
               const isActive = resolvedActiveProposicaoId === proposicao.id;
@@ -483,9 +493,10 @@ export default function ResultadoPage() {
                 </li>
               );
             })}
-          </ul>
+              </ul>
+            </div>
 
-          <div className="border-t border-[color:rgba(183,199,193,0.5)] pt-4">
+            <div className="mt-4 shrink-0 border-t border-[color:rgba(183,199,193,0.5)] pt-4">
             <div className="mb-3 h-2.5 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
               <div
                 className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--accent-strong))] transition-[width] duration-300"
@@ -509,6 +520,7 @@ export default function ResultadoPage() {
           </div>
         </SurfaceCard>
       </div>
+    </div>
 
       {errorMsg ? (
         <EmptyState
