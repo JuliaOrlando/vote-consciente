@@ -19,6 +19,15 @@ const getCachedProposicoes = unstable_cache(
         resumoCidadao: true,
         categoria: true,
         statusDescricao: true,
+        autores: {
+          select: {
+            parlamentar: {
+              select: {
+                nomeEleitoral: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ rankingRelevancia: "desc" }, { ano: "desc" }, { id: "desc" }],
     }),

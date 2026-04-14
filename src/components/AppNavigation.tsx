@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
-  FileText,
   Home,
   Info,
   Menu,
@@ -68,8 +68,8 @@ function Brand({ rail = false, expanded = false }: { rail?: boolean; expanded?: 
         rail && expanded && "justify-start"
       )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-[color:rgba(13,107,100,0.2)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] shadow-[0_14px_28px_-24px_rgba(13,107,100,0.8)]">
-        <FileText className="h-4 w-4" />
+      <span className="flex h-10 w-10 shrink-0 overflow-hidden items-center justify-center rounded-[18px] border border-[color:rgba(13,107,100,0.2)] shadow-[0_14px_28px_-24px_rgba(13,107,100,0.8)]">
+        <Image src="/logo.png" alt="Vote Consciente Logo" width={40} height={40} className="h-full w-full object-cover" />
       </span>
       {showText ? (
         <span className="min-w-0">

@@ -8,6 +8,7 @@ export type RawSimuladorProposicao = {
   resumoCidadao: string | null;
   categoria: string | null;
   statusDescricao: string | null;
+  autores?: { parlamentar: { nomeEleitoral: string } }[];
 };
 
 export type SimuladorCard = {
@@ -21,6 +22,7 @@ export type SimuladorCard = {
   categoria: string;
   statusDescricao: string | null;
   urlOficial: string;
+  autoresNomes: string;
 };
 
 let simuladorCardsCache: SimuladorCard[] | null = null;
@@ -53,6 +55,7 @@ function normalizeProposition(proposicao: RawSimuladorProposicao): SimuladorCard
     categoria: proposicao.categoria || "GERAL",
     statusDescricao: proposicao.statusDescricao || null,
     urlOficial: buildOfficialPropositionUrl(proposicao.id),
+    autoresNomes: proposicao.autores?.map((a) => a.parlamentar.nomeEleitoral).join(", ") || "",
   };
 }
 

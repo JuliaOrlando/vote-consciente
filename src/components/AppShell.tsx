@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 
 // Carrega a navegação somente no cliente para evitar hydration mismatch
 // (a nav usa usePathname + useState que dependem do ambiente do browser)
@@ -12,8 +13,13 @@ const AppNavigation = dynamic(
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen overflow-x-clip">
-      <div className="flex min-h-screen w-full">
+    <div className="min-h-screen overflow-x-clip relative">
+      {/* Watermark do Logo */}
+      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center opacity-[0.03] mix-blend-multiply select-none">
+        <Image src="/logo.png" alt="" width={600} height={600} priority={false} aria-hidden="true" className="scale-150 md:scale-100" />
+      </div>
+
+      <div className="relative z-10 flex min-h-screen w-full">
         <AppNavigation />
         <main className="min-w-0 flex-1 overflow-x-clip pb-28 md:pb-10">
           <div className="mx-auto flex min-h-full w-full max-w-[1540px] flex-col px-4 py-5 sm:px-6 md:px-7 md:py-7 xl:px-8">

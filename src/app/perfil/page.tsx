@@ -108,10 +108,10 @@ export default function PerfilPage() {
         />
       </SurfaceCard>
 
-      <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] items-start">
         {/* Coluna esquerda — dados pessoais */}
-        <div className="space-y-4">
-          <SurfaceCard className="space-y-5 p-5 sm:p-6">
+        <div className="space-y-4 min-w-0">
+          <SurfaceCard className="space-y-5 p-5 sm:p-6 min-w-0">
             {/* Avatar com upload */}
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
@@ -250,8 +250,8 @@ export default function PerfilPage() {
         </div>
 
         {/* Coluna direita — CRUD de itens acompanhados */}
-        <div className="space-y-4">
-          <SurfaceCard className="space-y-5 p-5 sm:p-6">
+        <div className="space-y-4 min-w-0">
+          <SurfaceCard className="space-y-5 p-5 sm:p-6 min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <h2 className="text-xl font-semibold text-[color:var(--ink)]">Itens acompanhados</h2>

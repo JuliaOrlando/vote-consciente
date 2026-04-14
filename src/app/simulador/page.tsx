@@ -131,7 +131,7 @@ export default function SimuladorPage() {
     return [...proposicoesVisiveis]
       .reverse()
       .filter((proposicao) =>
-        `${proposicao.numOficial} ${proposicao.titulo} ${proposicao.resumoCidadao ?? ""} ${proposicao.categoria} ${proposicao.statusDescricao ?? ""}`
+        `${proposicao.numOficial} ${proposicao.titulo} ${proposicao.resumoCidadao ?? ""} ${proposicao.categoria} ${proposicao.statusDescricao ?? ""} ${proposicao.autoresNomes ?? ""}`
           .toLowerCase()
           .includes(term)
       );
@@ -375,7 +375,7 @@ export default function SimuladorPage() {
                 setSearchTerm(event.target.value);
                 setVisibleBrowseCount(INITIAL_BROWSE_RENDER_COUNT);
               }}
-              placeholder="Buscar por número oficial, título, categoria ou situação"
+              placeholder="Buscar por número oficial, título, parlamentar, categoria ou situação"
               className="vc-input pl-12"
             />
           </div>
@@ -406,12 +406,13 @@ export default function SimuladorPage() {
             description="Ajuste os filtros ou termo de busca para inspecionar outras votações."
           />
         ) : (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
-            <SurfaceCard as="div" className="overflow-hidden p-0">
-              <ul
-                aria-label="Diretório de proposições para inspeção"
-                className="divide-y divide-[color:rgba(183,199,193,0.5)]"
-              >
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] items-start">
+            <SurfaceCard as="div" className="flex flex-col overflow-hidden p-0 h-[800px] max-h-[85vh] xl:max-h-[calc(100dvh-4rem)]">
+              <div className="flex-1 overflow-y-auto vc-scroll-area">
+                <ul
+                  aria-label="Diretório de proposições para inspeção"
+                  className="divide-y divide-[color:rgba(183,199,193,0.5)]"
+                >
                 {proposicoesExibidas.map((proposicao) => {
                   const isSelected = selectedSet.has(proposicao.id);
                   const isInspected = inspectedProposicaoId === proposicao.id;
@@ -485,7 +486,7 @@ export default function SimuladorPage() {
               </ul>
 
               {proposicoesExibidas.length < proposicoesFiltradas.length ? (
-                <div className="border-t border-[color:rgba(183,199,193,0.5)] px-4 py-4 sm:px-5">
+                <div className="shrink-0 border-t border-[color:rgba(183,199,193,0.5)] bg-[color:var(--surface)] px-4 py-4 sm:px-5 relative z-10 shadow-[0_-10px_20px_-10px_rgba(16,42,37,0.05)]">
                   <button
                     type="button"
                     onClick={() =>
@@ -497,14 +498,16 @@ export default function SimuladorPage() {
                   </button>
                 </div>
               ) : null}
+              </div>
             </SurfaceCard>
 
             <SurfaceCard
               as="aside"
-              className="vc-scroll-area max-h-[calc(100dvh-9rem)] space-y-4 overflow-y-auto pr-1.5 md:max-h-[calc(100dvh-8rem)] xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)]"
+              className="flex flex-col overflow-hidden p-0 h-[800px] max-h-[85vh] xl:max-h-[calc(100dvh-4rem)] xl:sticky xl:top-4"
             >
-              {inspectedProposicao ? (
-                <>
+              <div className="flex-1 overflow-y-auto vc-scroll-area p-5 sm:p-6 space-y-4">
+                {inspectedProposicao ? (
+                  <>
                   <div className="space-y-2">
                     <p className="vc-eyebrow">Inspeção da votação</p>
                     <h2 className="text-2xl font-semibold text-[color:var(--ink)]">{inspectedProposicao.numOficial}</h2>
@@ -803,6 +806,7 @@ export default function SimuladorPage() {
                   description="Use o botão Inspecionar na lista para abrir detalhes e decidir se o item entra no seu Meu Match."
                 />
               )}
+              </div>
             </SurfaceCard>
           </div>
         )}

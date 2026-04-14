@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
@@ -20,9 +20,18 @@ import {
   readInspectionSessionCache,
   writeInspectionSessionCache,
 } from "@/lib/proposicao-inspection-client";
-import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
+import { type ProposicaoInspectionData, normalizeVoteBucketKey } from "@/lib/proposicao-inspection";
 import { buildOfficialPropositionUrl, getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
 import { cn } from "@/lib/utils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+
+const VOTE_COLORS: Record<string, string> = {
+  SIM: "#2563eb",
+  NAO: "#dc2626",
+  ABSTENCAO: "#facc15",
+  OBSTRUCAO: "#f97316",
+  OUTROS: "#9ca3af",
+};
 
 const MAX_TABLE_SCROLL_HEIGHT = "max-h-[26rem]";
 
@@ -51,8 +60,10 @@ async function fetchSimuladorCards() {
   return data.dados;
 }
 
-function BackToVotacoesButton() {
+function BackButtonInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromMatch = searchParams?.get("from") === "match";
 
   return (
     <button
@@ -63,13 +74,28 @@ function BackToVotacoesButton() {
           return;
         }
 
-        router.push("/simulador");
+        router.push(fromMatch ? "/simulador/resultado" : "/simulador");
       }}
       className={buttonStyles({ variant: "ghost", size: "sm", className: "w-fit" })}
     >
       <ArrowLeft className="h-4 w-4" />
-      Voltar para Votações
+      {fromMatch ? "Voltar para Meu Match" : "Voltar para Votações"}
     </button>
+  );
+}
+
+function BackToVotacoesButton() {
+  return (
+    <Suspense 
+      fallback={
+        <button type="button" className={buttonStyles({ variant: "ghost", size: "sm", className: "w-fit" })}>
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
+      }
+    >
+      <BackButtonInner />
+    </Suspense>
   );
 }
 
@@ -84,6 +110,7 @@ export default function ProposicaoDetailPage() {
   const [inspectionError, setInspectionError] = useState("");
   const [loadingInspection, setLoadingInspection] = useState(true);
   const [inspectionLoadSeed, setInspectionLoadSeed] = useState(0);
+  const [deputySearchTerm, setDeputySearchTerm] = useState("");
   const { selectedSet, toggleSelection } = useMatchSelection();
 
   useEffect(() => {
@@ -176,9 +203,45 @@ export default function ProposicaoDetailPage() {
   const isSelected = isValidId ? selectedSet.has(proposicaoId) : false;
   const officialUrl = proposicao?.urlOficial ?? (isValidId ? buildOfficialPropositionUrl(proposicaoId) : "/simulador");
   const voteBreakdown = inspectionData?.voteBreakdown ?? [];
-  const partyBreakdown = inspectionData?.partyBreakdown ?? [];
   const individualDeputyVotes = inspectionData?.individualDeputyVotes ?? [];
-  const maxVoteBreakdown = voteBreakdown[0]?.total ?? 1;
+
+  const partyDetailedBreakdown = useMemo(() => {
+    if (!individualDeputyVotes || individualDeputyVotes.length === 0) return [];
+
+    const map = new Map<string, { sim: number; nao: number; total: number }>();
+    let grandTotal = 0;
+
+    for (const vote of individualDeputyVotes) {
+      if (!vote.partido) continue;
+      const p = vote.partido;
+      if (!map.has(p)) map.set(p, { sim: 0, nao: 0, total: 0 });
+      const stats = map.get(p)!;
+      stats.total++;
+      grandTotal++;
+
+      const normalized = normalizeVoteBucketKey(vote.voto);
+      if (normalized === "SIM") stats.sim++;
+      else if (normalized === "NAO") stats.nao++;
+    }
+
+    return Array.from(map.entries())
+      .map(([partido, stats]) => ({
+        partido,
+        sim: stats.sim,
+        nao: stats.nao,
+        total: stats.total,
+        percentage: grandTotal > 0 ? Math.round((stats.total / grandTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [individualDeputyVotes]);
+
+  const filteredDeputyVotes = useMemo(() => {
+    if (!deputySearchTerm.trim()) return individualDeputyVotes;
+    const term = deputySearchTerm.trim().toLowerCase();
+    return individualDeputyVotes.filter((v) =>
+      v.nomeEleitoral.toLowerCase().includes(term) || v.partido.toLowerCase().includes(term)
+    );
+  }, [individualDeputyVotes, deputySearchTerm]);
 
   if (!isValidId) {
     return (
@@ -257,16 +320,10 @@ export default function ProposicaoDetailPage() {
         />
       </SurfaceCard>
 
-      {proposicao ? (
+      {proposicao && hasSummary(proposicao.resumoCidadao, proposicao.titulo) ? (
         <SurfaceCard className="space-y-3 p-5 sm:p-6">
           <h2 className="text-lg font-semibold text-[color:var(--ink)]">Contexto da proposição</h2>
-          {hasSummary(proposicao.resumoCidadao, proposicao.titulo) ? (
-            <p className="text-sm leading-7 text-[color:var(--ink-muted)]">{proposicao.resumoCidadao}</p>
-          ) : (
-            <p className="text-sm leading-7 text-[color:var(--ink-soft)]">
-              Resumo curto indisponível. Use a ficha oficial para leitura integral da tramitação.
-            </p>
-          )}
+          <p className="text-sm leading-7 text-[color:var(--ink-muted)]">{proposicao.resumoCidadao}</p>
         </SurfaceCard>
       ) : null}
 
@@ -287,8 +344,8 @@ export default function ProposicaoDetailPage() {
       ) : null}
 
       {inspectionData ? (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-          <SurfaceCard className="space-y-4 p-5 sm:p-6">
+        <div className="grid w-full gap-6 lg:grid-cols-2 lg:items-stretch">
+          <SurfaceCard className="flex flex-col space-y-6 p-5 sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="primary">Inspeção completa</Badge>
               {inspectionData.totalDeputyVotes > 0 ? (
@@ -299,30 +356,52 @@ export default function ProposicaoDetailPage() {
             </div>
 
             {voteBreakdown.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-[color:var(--ink)]">Resultado geral da votação nominal</h3>
-                <div className="grid gap-2">
-                  {voteBreakdown.map((bucket) => (
-                    <div key={bucket.key} className="vc-panel space-y-2">
-                      <div className="flex items-center justify-between gap-2 text-sm">
-                        <span className="font-semibold text-[color:var(--ink)]">{bucket.label}</span>
-                        <span className="text-[color:var(--ink-muted)]">
-                          {bucket.total} ({bucket.percentage}%)
-                        </span>
-                      </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
-                        <div
-                          className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--accent-strong))]"
-                          style={{ width: `${Math.max((bucket.total / maxVoteBreakdown) * 100, 7)}%` }}
-                        />
-                      </div>
-                      {bucket.key === "OUTROS" && bucket.rawValues.length > 0 ? (
-                        <p className="text-xs text-[color:var(--ink-soft)]">
-                          Valores fora do padrão: {bucket.rawValues.join(", ")}
-                        </p>
-                      ) : null}
-                    </div>
-                  ))}
+                <div className="h-[280px] rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <RechartsTooltip
+                        isAnimationActive={false}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="flex flex-col gap-1.5 rounded-xl border border-[color:rgba(183,199,193,0.3)] bg-white/95 p-3.5 shadow-xl backdrop-blur-md">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: payload[0].color }} />
+                                  <span className="font-semibold text-[color:var(--ink)]">{data.label}</span>
+                                </div>
+                                <p className="pl-5 text-sm font-medium text-[color:var(--ink-muted)]">
+                                  {data.total} votos
+                                  <span className="ml-1.5 rounded-md bg-[color:rgba(183,199,193,0.15)] px-1.5 py-0.5 text-xs font-bold text-[color:var(--ink)]">
+                                    {data.percentage ?? 0}%
+                                  </span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Pie
+                        data={voteBreakdown}
+                        dataKey="total"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        minAngle={12}
+                        stroke="none"
+                      >
+                        {voteBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={VOTE_COLORS[entry.key] || VOTE_COLORS.OUTROS} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             ) : (
@@ -333,34 +412,47 @@ export default function ProposicaoDetailPage() {
               />
             )}
 
-            {partyBreakdown.length > 0 ? (
-              <div className="space-y-2">
+            {partyDetailedBreakdown.length > 0 ? (
+              <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-[color:var(--ink)]">Distribuição por partido</h3>
-                <div className={cn("vc-scroll-area overflow-auto rounded-2xl border border-[color:rgba(183,199,193,0.5)]", MAX_TABLE_SCROLL_HEIGHT)}>
-                  <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                    <thead>
-                      <tr>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                          Partido
-                        </th>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                          Votos
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {partyBreakdown.map((row) => (
-                        <tr key={row.partido}>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                            {row.partido}
-                          </td>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                            {row.total} ({row.percentage}%)
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex max-h-[360px] flex-col overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white">
+                  <div className="vc-scroll-area flex-1 overflow-y-auto p-4">
+                    <div className="grid gap-3 pr-2">
+                      {partyDetailedBreakdown.map((item) => {
+                        const simWidth = Math.max((item.sim / item.total) * 100, 0);
+                        const naoWidth = Math.max((item.nao / item.total) * 100, 0);
+
+                        return (
+                          <div key={item.partido} className="vc-panel flex flex-col gap-2 p-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="font-semibold text-[color:var(--ink)]">{item.partido}</span>
+                              <span className="text-[color:var(--ink-muted)]">
+                                {item.total} votos ({item.percentage}%)
+                              </span>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              {/* Sim bar */}
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
+                                  <div className="h-full rounded-full bg-[#10b981]" style={{ width: `${simWidth}%` }} />
+                                </div>
+                                <span className="w-12 text-right text-[10px] font-medium text-[#10b981]">Sim: {item.sim}</span>
+                              </div>
+
+                              {/* Nao bar */}
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
+                                  <div className="h-full rounded-full bg-[#ec4899]" style={{ width: `${naoWidth}%` }} />
+                                </div>
+                                <span className="w-12 text-right text-[10px] font-medium text-[#ec4899]">Não: {item.nao}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -368,127 +460,73 @@ export default function ProposicaoDetailPage() {
                 Sem agregação por partido para esta proposição.
               </div>
             )}
+          </SurfaceCard>
 
-            {individualDeputyVotes.length > 0 ? (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-[color:var(--ink)]">Votos individuais dos parlamentares</h3>
-                <div className="vc-scroll-area max-h-[38rem] overflow-auto rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
-                  <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                    <thead>
-                      <tr>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                          Deputado
-                        </th>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                          Partido/UF
-                        </th>
-                        <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                          Voto
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {individualDeputyVotes.map((vote) => (
-                        <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                            {vote.nomeEleitoral}
-                          </td>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
-                            {vote.partido}/{vote.uf}
-                          </td>
-                          <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                            {vote.voto}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          <div className="relative flex min-h-[500px] flex-col lg:min-h-0">
+            <SurfaceCard className="flex flex-col p-5 sm:p-6 lg:absolute lg:inset-0">
+              {individualDeputyVotes.length > 0 ? (
+                <div className="flex h-full flex-col space-y-4 min-h-0">
+                  <div className="flex shrink-0 flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                    <h3 className="text-lg font-semibold text-[color:var(--ink)]">Votos dos parlamentares</h3>
+                    <input
+                      type="search"
+                      placeholder="Buscar por deputado(a) ou partido"
+                      value={deputySearchTerm}
+                      onChange={(e) => setDeputySearchTerm(e.target.value)}
+                      className="vc-input max-w-sm"
+                    />
+                  </div>
+                  <div className="flex min-h-[200px] flex-1 flex-col overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white">
+                    <div className="vc-scroll-area flex-1 overflow-y-auto">
+                      <table className="w-full border-separate border-spacing-0 text-left text-sm">
+                        <thead className="sticky top-0 bg-white/95 backdrop-blur-sm">
+                          <tr>
+                            <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                              Deputado
+                            </th>
+                            <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                              Partido/UF
+                            </th>
+                            <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                              Voto
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredDeputyVotes.length > 0 ? (
+                            filteredDeputyVotes.map((vote) => (
+                              <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
+                                <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                  {vote.nomeEleitoral}
+                                </td>
+                                <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
+                                  {vote.partido}/{vote.uf}
+                                </td>
+                                <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                  {vote.voto}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={3} className="px-3 py-8 text-center text-[color:var(--ink-muted)]">
+                                Nenhum deputado encontrado para "{deputySearchTerm}".
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
-                Dados de votos individuais indisponíveis para esta proposição.
-              </div>
-            )}
-          </SurfaceCard>
+              ) : (
+                <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
+                  Dados de votos individuais indisponíveis para esta proposição.
+                </div>
+              )}
+            </SurfaceCard>
+          </div>
 
-          <SurfaceCard className="space-y-4 p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-[color:var(--ink)]">Ficha de dados disponíveis</h2>
-            <div className="overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)]">
-              <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                <tbody>
-                  <tr>
-                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                      Metadados da proposição
-                    </th>
-                    <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                      {inspectionData.availableData.propositionMetadata ? "Disponível" : "Indisponível"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                      Resultado geral nominal
-                    </th>
-                    <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                      {inspectionData.availableData.generalVotingResult ? "Disponível" : "Indisponível"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                      Votos individuais
-                    </th>
-                    <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                      {inspectionData.availableData.individualDeputyVotes ? "Disponível" : "Indisponível"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                      Agregados para gráficos
-                    </th>
-                    <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                      {inspectionData.availableData.chartReadyAggregate ? "Disponível" : "Indisponível"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th className="px-3 py-2 text-[color:var(--ink-soft)]">Histórico agrupado</th>
-                    <td className="px-3 py-2 font-medium text-[color:var(--ink)]">
-                      {inspectionData.availableData.groupedHistoricalVotes ? "Disponível" : "Indisponível"}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {inspectionData.unavailableData.length > 0 ? (
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[color:var(--ink)]">Campos indisponíveis nesta fonte</h3>
-                <ul className="space-y-2">
-                  {inspectionData.unavailableData.map((message) => (
-                    <li key={message} className="vc-panel text-sm text-[color:var(--ink-muted)]">
-                      {message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
-                Todos os blocos desta inspeção possuem dados disponíveis nesta fonte.
-              </div>
-            )}
-
-            <div className="vc-panel space-y-2">
-              <p className="text-sm font-semibold text-[color:var(--ink)]">Próximo passo</p>
-              <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
-                {isSelected
-                  ? "Esta proposição já está salva no Meu Match. Você pode votar nela agora."
-                  : "Adicione esta proposição ao Meu Match para registrar sua opinião e comparar com os deputados."}
-              </p>
-              <Link href="/simulador/resultado" className={buttonStyles({ variant: "primary", size: "sm" })}>
-                <Sparkles className="h-4 w-4" />
-                Abrir Meu Match
-              </Link>
-            </div>
-          </SurfaceCard>
         </div>
       ) : (
         <EmptyState
