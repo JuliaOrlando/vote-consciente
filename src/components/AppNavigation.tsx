@@ -10,6 +10,7 @@ import {
   Menu,
   Search,
   Sparkles,
+  UserCircle,
   Vote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,13 @@ const navigationItems = [
     label: "Sobre",
     icon: Info,
     matches: (pathname: string) => pathname.startsWith("/sobre"),
+  },
+  {
+    href: "/perfil",
+    label: "Minha Conta",
+    icon: UserCircle,
+    matches: (pathname: string) =>
+      pathname.startsWith("/perfil") || pathname.startsWith("/login") || pathname.startsWith("/cadastro"),
   },
 ];
 
@@ -181,7 +189,7 @@ export function AppNavigation() {
         aria-label="Navegação principal"
         className="fixed inset-x-0 bottom-0 z-50 border-t border-[color:rgba(148,163,184,0.16)] bg-[color:rgba(243,239,228,0.96)] px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur md:hidden"
       >
-        <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-xl grid-cols-6 gap-1">
           {navigationItems.map(({ href, label, icon: Icon, matches }) => {
             const isActive = matches(pathname);
 

@@ -198,6 +198,8 @@ export default function ResultadoPage() {
   const totalSelecionadas = selectedProposicoes.length;
   const progresso = totalSelecionadas === 0 ? 0 : Math.round((votosRealizados / totalSelecionadas) * 100);
   const canCalculate = historicoVotos.some((item) => item.voto !== "PULAR");
+  // Todos os itens selecionados já foram votados
+  const allVoted = totalSelecionadas > 0 && proposicoesPendentes.length === 0;
 
   const handleVote = (id: number, voto: VoteValue) => {
     setErrorMsg("");
@@ -377,31 +379,46 @@ export default function ResultadoPage() {
                 </a>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-[color:rgba(183,199,193,0.5)] pt-5 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => handleVote(activeProposicao.id, "NAO")}
-                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[20px] border border-[color:rgba(176,57,38,0.24)] bg-[linear-gradient(180deg,rgba(255,247,245,0.98),rgba(255,240,236,0.98))] px-5 text-sm font-semibold text-[color:var(--danger-ink)] transition-all hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(255,241,237,1),rgba(255,232,227,1))] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] sm:text-base"
-                >
-                  <X className="h-4 w-4" />
-                  Discordo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleVote(activeProposicao.id, "PULAR")}
-                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[20px] border border-[color:var(--border-strong)] bg-white px-5 text-sm font-semibold text-[color:var(--ink)] transition-all hover:-translate-y-0.5 hover:border-[color:rgba(13,107,100,0.18)] hover:bg-[color:rgba(255,255,255,0.98)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] sm:text-base"
-                >
-                  Pular
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleVote(activeProposicao.id, "SIM")}
-                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[20px] border border-[color:rgba(12,141,103,0.24)] bg-[linear-gradient(180deg,rgba(241,252,248,0.98),rgba(230,248,241,0.98))] px-5 text-sm font-semibold text-[color:var(--success-ink)] transition-all hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(234,250,244,1),rgba(222,245,236,1))] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] sm:text-base"
-                >
-                  <Check className="h-4 w-4" />
-                  Concordo
-                </button>
-              </div>
+              {/* Quando todos os itens foram votados, exibe banner de conclusão */}
+              {allVoted ? (
+                <div className="flex flex-col items-start gap-4 rounded-[20px] border border-[color:rgba(12,141,103,0.24)] bg-[linear-gradient(180deg,rgba(241,252,248,0.98),rgba(230,248,241,0.98))] p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="font-semibold text-[color:var(--ink)]">Todas as proposições respondidas!</p>
+                      <p className="text-sm text-[color:var(--ink-muted)]">Você pode revisar suas respostas na fila ao lado ou calcular o match agora.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 border-t border-[color:rgba(183,199,193,0.5)] pt-5 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => handleVote(activeProposicao.id, "NAO")}
+                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[20px] border border-[color:rgba(176,57,38,0.24)] bg-[linear-gradient(180deg,rgba(255,247,245,0.98),rgba(255,240,236,0.98))] px-5 text-sm font-semibold text-[color:var(--danger-ink)] transition-all hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(255,241,237,1),rgba(255,232,227,1))] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] sm:text-base"
+                  >
+                    <X className="h-4 w-4" />
+                    Discordo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVote(activeProposicao.id, "PULAR")}
+                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[20px] border border-[color:var(--border-strong)] bg-white px-5 text-sm font-semibold text-[color:var(--ink)] transition-all hover:-translate-y-0.5 hover:border-[color:rgba(13,107,100,0.18)] hover:bg-[color:rgba(255,255,255,0.98)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] sm:text-base"
+                  >
+                    Pular
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVote(activeProposicao.id, "SIM")}
+                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[20px] border border-[color:rgba(12,141,103,0.24)] bg-[linear-gradient(180deg,rgba(241,252,248,0.98),rgba(230,248,241,0.98))] px-5 text-sm font-semibold text-[color:var(--success-ink)] transition-all hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(234,250,244,1),rgba(222,245,236,1))] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] sm:text-base"
+                  >
+                    <Check className="h-4 w-4" />
+                    Concordo
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <EmptyState

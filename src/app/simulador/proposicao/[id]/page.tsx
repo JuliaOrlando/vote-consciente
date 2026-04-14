@@ -21,7 +21,7 @@ import {
   writeInspectionSessionCache,
 } from "@/lib/proposicao-inspection-client";
 import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
-import { getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
+import { buildOfficialPropositionUrl, getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
 import { cn } from "@/lib/utils";
 
 const MAX_TABLE_SCROLL_HEIGHT = "max-h-[26rem]";
@@ -35,9 +35,6 @@ function hasSummary(summary: string | null, title: string) {
   return normalizedSummary.length > 0 && normalizedSummary !== normalizedTitle;
 }
 
-function buildOfficialPropositionUrl(id: number) {
-  return `https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${id}`;
-}
 
 async function fetchSimuladorCards() {
   const response = await fetch("/api/proposicoes");

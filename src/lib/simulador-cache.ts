@@ -26,7 +26,7 @@ export type SimuladorCard = {
 let simuladorCardsCache: SimuladorCard[] | null = null;
 let simuladorCardsPromise: Promise<SimuladorCard[]> | null = null;
 
-function buildOfficialPropositionUrl(id: number) {
+export function buildOfficialPropositionUrl(id: number) {
   return `https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${id}`;
 }
 
