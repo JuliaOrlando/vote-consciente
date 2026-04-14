@@ -364,11 +364,7 @@ export default function ResultadoPage() {
                 </h2>
                 {hasSummary(activeProposicao.resumoCidadao, activeProposicao.titulo) ? (
                   <p className="text-base leading-7 text-[color:var(--ink-muted)]">{activeProposicao.resumoCidadao}</p>
-                ) : (
-                  <p className="text-base leading-7 text-[color:var(--ink-soft)]">
-                    Resumo curto indisponível para este item. Consulte a ficha oficial para o texto completo.
-                  </p>
-                )}
+                ) : null}
                 <a
                   href={activeProposicao.urlOficial}
                   target="_blank"

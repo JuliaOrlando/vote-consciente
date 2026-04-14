@@ -257,16 +257,10 @@ export default function ProposicaoDetailPage() {
         />
       </SurfaceCard>
 
-      {proposicao ? (
+      {proposicao && hasSummary(proposicao.resumoCidadao, proposicao.titulo) ? (
         <SurfaceCard className="space-y-3 p-5 sm:p-6">
           <h2 className="text-lg font-semibold text-[color:var(--ink)]">Contexto da proposição</h2>
-          {hasSummary(proposicao.resumoCidadao, proposicao.titulo) ? (
-            <p className="text-sm leading-7 text-[color:var(--ink-muted)]">{proposicao.resumoCidadao}</p>
-          ) : (
-            <p className="text-sm leading-7 text-[color:var(--ink-soft)]">
-              Resumo curto indisponível. Use a ficha oficial para leitura integral da tramitação.
-            </p>
-          )}
+          <p className="text-sm leading-7 text-[color:var(--ink-muted)]">{proposicao.resumoCidadao}</p>
         </SurfaceCard>
       ) : null}
 
