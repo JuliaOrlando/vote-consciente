@@ -20,16 +20,18 @@ import {
   readInspectionSessionCache,
   writeInspectionSessionCache,
 } from "@/lib/proposicao-inspection-client";
-import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
+import { type ProposicaoInspectionData, normalizeVoteBucketKey } from "@/lib/proposicao-inspection";
 import { buildOfficialPropositionUrl, getCachedSimuladorCards, type SimuladorCard } from "@/lib/simulador-cache";
 import { cn } from "@/lib/utils";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 
-const PIE_COLORS = [
-  "#0d6b64", "#0f766e", "#14b8a6", "#5eead4", 
-  "#b7c7c1", "#8e9c97", "#b45309", "#d97706", 
-  "#f59e0b", "#fbca14"
-];
+const VOTE_COLORS: Record<string, string> = {
+  SIM: "#2563eb", // Blue-600 (Primary Blue)
+  NAO: "#dc2626", // Red-600 (Primary Red)
+  ABSTENCAO: "#facc15", // Yellow-400 (Vibrant Yellow)
+  OBSTRUCAO: "#f97316", // Orange-500
+  OUTROS: "#9ca3af", // Gray-400
+};
 
 const MAX_TABLE_SCROLL_HEIGHT = "max-h-[26rem]";
 
@@ -184,9 +186,37 @@ export default function ProposicaoDetailPage() {
   const isSelected = isValidId ? selectedSet.has(proposicaoId) : false;
   const officialUrl = proposicao?.urlOficial ?? (isValidId ? buildOfficialPropositionUrl(proposicaoId) : "/simulador");
   const voteBreakdown = inspectionData?.voteBreakdown ?? [];
-  const partyBreakdown = inspectionData?.partyBreakdown ?? [];
   const individualDeputyVotes = inspectionData?.individualDeputyVotes ?? [];
-  const maxVoteBreakdown = voteBreakdown[0]?.total ?? 1;
+
+  const partyDetailedBreakdown = useMemo(() => {
+    if (!individualDeputyVotes || individualDeputyVotes.length === 0) return [];
+
+    const map = new Map<string, { sim: number; nao: number; total: number }>();
+    let grandTotal = 0;
+
+    for (const vote of individualDeputyVotes) {
+      if (!vote.partido) continue;
+      const p = vote.partido;
+      if (!map.has(p)) map.set(p, { sim: 0, nao: 0, total: 0 });
+      const stats = map.get(p)!;
+      stats.total++;
+      grandTotal++;
+
+      const normalized = normalizeVoteBucketKey(vote.voto);
+      if (normalized === "SIM") stats.sim++;
+      else if (normalized === "NAO") stats.nao++;
+    }
+
+    return Array.from(map.entries())
+      .map(([partido, stats]) => ({
+        partido,
+        sim: stats.sim,
+        nao: stats.nao,
+        total: stats.total,
+        percentage: grandTotal > 0 ? Math.round((stats.total / grandTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [individualDeputyVotes]);
 
   const filteredDeputyVotes = useMemo(() => {
     if (!deputySearchTerm.trim()) return individualDeputyVotes;
@@ -309,30 +339,52 @@ export default function ProposicaoDetailPage() {
             </div>
 
             {voteBreakdown.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-[color:var(--ink)]">Resultado geral da votação nominal</h3>
-                <div className="grid gap-2">
-                  {voteBreakdown.map((bucket) => (
-                    <div key={bucket.key} className="vc-panel space-y-2">
-                      <div className="flex items-center justify-between gap-2 text-sm">
-                        <span className="font-semibold text-[color:var(--ink)]">{bucket.label}</span>
-                        <span className="text-[color:var(--ink-muted)]">
-                          {bucket.total} ({bucket.percentage}%)
-                        </span>
-                      </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
-                        <div
-                          className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--accent-strong))]"
-                          style={{ width: `${Math.max((bucket.total / maxVoteBreakdown) * 100, 7)}%` }}
-                        />
-                      </div>
-                      {bucket.key === "OUTROS" && bucket.rawValues.length > 0 ? (
-                        <p className="text-xs text-[color:var(--ink-soft)]">
-                          Valores fora do padrão: {bucket.rawValues.join(", ")}
-                        </p>
-                      ) : null}
-                    </div>
-                  ))}
+                <div className="h-[280px] rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <RechartsTooltip
+                        isAnimationActive={false}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="flex flex-col gap-1.5 rounded-xl border border-[color:rgba(183,199,193,0.3)] bg-white/95 p-3.5 shadow-xl backdrop-blur-md">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: payload[0].color }} />
+                                  <span className="font-semibold text-[color:var(--ink)]">{data.label}</span>
+                                </div>
+                                <p className="pl-5 text-sm font-medium text-[color:var(--ink-muted)]">
+                                  {data.total} votos
+                                  <span className="ml-1.5 rounded-md bg-[color:rgba(183,199,193,0.15)] px-1.5 py-0.5 text-xs font-bold text-[color:var(--ink)]">
+                                    {data.percentage ?? 0}%
+                                  </span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Pie
+                        data={voteBreakdown}
+                        dataKey="total"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        minAngle={12}
+                        stroke="none"
+                      >
+                        {voteBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={VOTE_COLORS[entry.key] || VOTE_COLORS.OUTROS} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             ) : (
@@ -343,37 +395,47 @@ export default function ProposicaoDetailPage() {
               />
             )}
 
-            {partyBreakdown.length > 0 ? (
+            {partyDetailedBreakdown.length > 0 ? (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-[color:var(--ink)]">Distribuição por partido</h3>
-                <div className="h-[280px] rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <RechartsTooltip
-                        formatter={(value: number, name: string, props: any) => [
-                          `${value} votos (${props.payload.percentage}%)`,
-                          name,
-                        ]}
-                        contentStyle={{ borderRadius: "12px", border: "1px solid rgba(183,199,193,0.5)", fontSize: "14px", backgroundColor: "#fff" }}
-                        itemStyle={{ color: "var(--ink)" }}
-                      />
-                      <Pie
-                        data={partyBreakdown}
-                        dataKey="total"
-                        nameKey="partido"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={2}
-                        stroke="none"
-                      >
-                        {partyBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="flex max-h-[360px] flex-col overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white">
+                  <div className="vc-scroll-area flex-1 overflow-y-auto p-4">
+                    <div className="grid gap-3 pr-2">
+                      {partyDetailedBreakdown.map((item) => {
+                        const simWidth = Math.max((item.sim / item.total) * 100, 0);
+                        const naoWidth = Math.max((item.nao / item.total) * 100, 0);
+                        
+                        return (
+                          <div key={item.partido} className="vc-panel flex flex-col gap-2 p-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="font-semibold text-[color:var(--ink)]">{item.partido}</span>
+                              <span className="text-[color:var(--ink-muted)]">
+                                {item.total} votos ({item.percentage}%)
+                              </span>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5">
+                              {/* Sim bar */}
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
+                                  <div className="h-full rounded-full bg-[#10b981]" style={{ width: `${simWidth}%` }} />
+                                </div>
+                                <span className="w-12 text-right text-[10px] font-medium text-[#10b981]">Sim: {item.sim}</span>
+                              </div>
+                              
+                              {/* Nao bar */}
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
+                                  <div className="h-full rounded-full bg-[#ec4899]" style={{ width: `${naoWidth}%` }} />
+                                </div>
+                                <span className="w-12 text-right text-[10px] font-medium text-[#ec4899]">Não: {item.nao}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

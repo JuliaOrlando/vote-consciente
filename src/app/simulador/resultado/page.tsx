@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
+  ArrowUp,
   Check,
   CheckCircle2,
   Loader2,
@@ -122,7 +123,18 @@ export default function ResultadoPage() {
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const { selectedIds, removeSelection } = useMatchSelection();
+
+  useEffect(() => {
+    const handleScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   useEffect(() => {
     setHistoricoVotos(parseStoredVotes(localStorage.getItem(MATCH_VOTES_STORAGE_KEY)));
@@ -604,6 +616,17 @@ export default function ResultadoPage() {
           ))}
         </div>
       ) : null}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          aria-label="Voltar ao topo"
+          className="fixed bottom-28 left-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--accent)] text-white shadow-lg transition-all hover:-translate-y-1 hover:bg-[color:var(--accent-strong)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] md:bottom-10 md:left-28"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }
