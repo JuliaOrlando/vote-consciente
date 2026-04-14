@@ -131,7 +131,7 @@ export default function SimuladorPage() {
     return [...proposicoesVisiveis]
       .reverse()
       .filter((proposicao) =>
-        `${proposicao.numOficial} ${proposicao.titulo} ${proposicao.resumoCidadao ?? ""} ${proposicao.categoria} ${proposicao.statusDescricao ?? ""}`
+        `${proposicao.numOficial} ${proposicao.titulo} ${proposicao.resumoCidadao ?? ""} ${proposicao.categoria} ${proposicao.statusDescricao ?? ""} ${proposicao.autoresNomes ?? ""}`
           .toLowerCase()
           .includes(term)
       );
@@ -375,7 +375,7 @@ export default function SimuladorPage() {
                 setSearchTerm(event.target.value);
                 setVisibleBrowseCount(INITIAL_BROWSE_RENDER_COUNT);
               }}
-              placeholder="Buscar por número oficial, título, categoria ou situação"
+              placeholder="Buscar por número oficial, título, parlamentar, categoria ou situação"
               className="vc-input pl-12"
             />
           </div>
