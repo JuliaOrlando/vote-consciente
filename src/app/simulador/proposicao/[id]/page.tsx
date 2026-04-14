@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
@@ -26,11 +26,11 @@ import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 
 const VOTE_COLORS: Record<string, string> = {
-  SIM: "#2563eb", // Blue-600 (Primary Blue)
-  NAO: "#dc2626", // Red-600 (Primary Red)
-  ABSTENCAO: "#facc15", // Yellow-400 (Vibrant Yellow)
-  OBSTRUCAO: "#f97316", // Orange-500
-  OUTROS: "#9ca3af", // Gray-400
+  SIM: "#2563eb",
+  NAO: "#dc2626",
+  ABSTENCAO: "#facc15",
+  OBSTRUCAO: "#f97316",
+  OUTROS: "#9ca3af",
 };
 
 const MAX_TABLE_SCROLL_HEIGHT = "max-h-[26rem]";
@@ -60,8 +60,10 @@ async function fetchSimuladorCards() {
   return data.dados;
 }
 
-function BackToVotacoesButton() {
+function BackButtonInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromMatch = searchParams?.get("from") === "match";
 
   return (
     <button
@@ -72,13 +74,28 @@ function BackToVotacoesButton() {
           return;
         }
 
-        router.push("/simulador");
+        router.push(fromMatch ? "/simulador/resultado" : "/simulador");
       }}
       className={buttonStyles({ variant: "ghost", size: "sm", className: "w-fit" })}
     >
       <ArrowLeft className="h-4 w-4" />
-      Voltar para Votações
+      {fromMatch ? "Voltar para Meu Match" : "Voltar para Votações"}
     </button>
+  );
+}
+
+function BackToVotacoesButton() {
+  return (
+    <Suspense 
+      fallback={
+        <button type="button" className={buttonStyles({ variant: "ghost", size: "sm", className: "w-fit" })}>
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
+      }
+    >
+      <BackButtonInner />
+    </Suspense>
   );
 }
 
@@ -404,7 +421,7 @@ export default function ProposicaoDetailPage() {
                       {partyDetailedBreakdown.map((item) => {
                         const simWidth = Math.max((item.sim / item.total) * 100, 0);
                         const naoWidth = Math.max((item.nao / item.total) * 100, 0);
-                        
+
                         return (
                           <div key={item.partido} className="vc-panel flex flex-col gap-2 p-3">
                             <div className="flex items-center justify-between text-sm">
@@ -413,7 +430,7 @@ export default function ProposicaoDetailPage() {
                                 {item.total} votos ({item.percentage}%)
                               </span>
                             </div>
-                            
+
                             <div className="flex flex-col gap-1.5">
                               {/* Sim bar */}
                               <div className="flex items-center gap-2">
@@ -422,7 +439,7 @@ export default function ProposicaoDetailPage() {
                                 </div>
                                 <span className="w-12 text-right text-[10px] font-medium text-[#10b981]">Sim: {item.sim}</span>
                               </div>
-                              
+
                               {/* Nao bar */}
                               <div className="flex items-center gap-2">
                                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:rgba(159,179,171,0.28)]">
@@ -462,51 +479,51 @@ export default function ProposicaoDetailPage() {
                   <div className="flex min-h-[200px] flex-1 flex-col overflow-hidden rounded-2xl border border-[color:rgba(183,199,193,0.5)] bg-white">
                     <div className="vc-scroll-area flex-1 overflow-y-auto">
                       <table className="w-full border-separate border-spacing-0 text-left text-sm">
-                      <thead className="sticky top-0 bg-white/95 backdrop-blur-sm">
-                        <tr>
-                          <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                            Deputado
-                          </th>
-                          <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
-                            Partido/UF
-                          </th>
-                          <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
-                            Voto
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredDeputyVotes.length > 0 ? (
-                          filteredDeputyVotes.map((vote) => (
-                            <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
-                              <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
-                                {vote.nomeEleitoral}
-                              </td>
-                              <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
-                                {vote.partido}/{vote.uf}
-                              </td>
-                              <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
-                                {vote.voto}
+                        <thead className="sticky top-0 bg-white/95 backdrop-blur-sm">
+                          <tr>
+                            <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                              Deputado
+                            </th>
+                            <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-soft)]">
+                              Partido/UF
+                            </th>
+                            <th className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-soft)]">
+                              Voto
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredDeputyVotes.length > 0 ? (
+                            filteredDeputyVotes.map((vote) => (
+                              <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
+                                <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
+                                  {vote.nomeEleitoral}
+                                </td>
+                                <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
+                                  {vote.partido}/{vote.uf}
+                                </td>
+                                <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-right text-[color:var(--ink-muted)]">
+                                  {vote.voto}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={3} className="px-3 py-8 text-center text-[color:var(--ink-muted)]">
+                                Nenhum deputado encontrado para "{deputySearchTerm}".
                               </td>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={3} className="px-3 py-8 text-center text-[color:var(--ink-muted)]">
-                              Nenhum deputado encontrado para "{deputySearchTerm}".
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
-                Dados de votos individuais indisponíveis para esta proposição.
-              </div>
-            )}
+              ) : (
+                <div className="vc-panel text-sm text-[color:var(--ink-muted)]">
+                  Dados de votos individuais indisponíveis para esta proposição.
+                </div>
+              )}
             </SurfaceCard>
           </div>
 

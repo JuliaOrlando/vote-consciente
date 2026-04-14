@@ -379,7 +379,7 @@ export default function ResultadoPage() {
                 ) : null}
                 <div className="flex flex-wrap items-center gap-2 pt-2">
                   <Link
-                    href={`/simulador/proposicao/${activeProposicao.id}`}
+                    href={`/simulador/proposicao/${activeProposicao.id}?from=match`}
                     className={buttonStyles({ variant: "secondary", size: "sm" })}
                   >
                     Ver detalhes do projeto
