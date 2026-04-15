@@ -29,16 +29,16 @@ export function buttonStyles({
   className?: string;
 }) {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-60",
+    "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--focus-ring)] active:translate-y-px disabled:pointer-events-none disabled:opacity-60",
     size === "sm" && "min-h-10 px-4 text-sm",
     size === "md" && "min-h-11 px-5 text-sm",
     size === "lg" && "min-h-12 px-6 text-base",
     variant === "primary" &&
-      "bg-[color:var(--accent)] text-white shadow-[0_16px_34px_-24px_rgba(13,107,100,0.72)] hover:bg-[color:var(--accent-strong)]",
+      "border border-transparent bg-[color:var(--accent)] text-white shadow-[0_16px_34px_-24px_rgba(13,107,100,0.72)] hover:bg-[color:var(--accent-strong)]",
     variant === "secondary" &&
       "border border-[color:var(--border)] bg-white text-[color:var(--ink)] hover:border-[color:var(--border-strong)] hover:bg-[color:rgba(255,255,255,0.98)]",
     variant === "ghost" &&
-      "text-[color:var(--ink-muted)] hover:bg-white/80 hover:text-[color:var(--ink)]",
+      "border border-transparent text-[color:var(--ink-muted)] hover:border-[color:rgba(13,107,100,0.16)] hover:bg-white/80 hover:text-[color:var(--ink)]",
     className
   );
 }

@@ -3,34 +3,32 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Recebe os votos do App (Simulador)
+// Motor de similaridade: compara votos do cidadão com os votos dos deputados
 export async function POST(req: Request) {
     try {
         const payload = await req.json();
-        const { usuarioId, votosCidadao } = payload;
-        // votosCidadao: { proposicaoId: 123, voto: 'SIM' | 'NAO' | 'PULAR' }[]
+        const { votosCidadao } = payload;
 
         if (!votosCidadao || !Array.isArray(votosCidadao)) {
             return NextResponse.json({ error: "Votos do Cidadão ausentes ou inválidos." }, { status: 400 });
         }
 
-        // Filtramos para não pontuar nem penalizar o parlamentar caso o cidadão não conheça o projeto.
-        const votosValidos = votosCidadao.filter(v => v.voto !== "PULAR");
+        // Puladas não influenciam o score, apenas SIM/NAO são considerados
+        const votosValidos = votosCidadao.filter((v: { voto: string }) => v.voto !== "PULAR");
 
         if (votosValidos.length === 0) {
             return NextResponse.json({ error: "É necessário ao menos um posicionamento claro (SIM/NÃO) para o cálculo." }, { status: 400 });
         }
 
         const idsPropostas = votosValidos
-            .map(v => parseInt(v.proposicaoId, 10))
-            .filter(id => !isNaN(id));
+            .map((v: { proposicaoId: string }) => parseInt(v.proposicaoId, 10))
+            .filter((id: number) => !isNaN(id));
 
         if (idsPropostas.length === 0) {
             return NextResponse.json({ error: "IDs de proposições inválidos submetidos." }, { status: 400 });
         }
 
-        // Puxamos de uma vez todos os parlamentares e cruzamos apenas os IDs dessas propostas
-        // Lógica de Retry para Cold Start do Banco de Dados Neon (Serverless)
+        // Retry para suportar cold start no banco serverless (Neon)
         let deputados = null;
         let retries = 3;
         while (retries > 0) {
@@ -42,12 +40,11 @@ export async function POST(req: Request) {
                         }
                     }
                 });
-                break; // Sucesso, sai do loop
+                break;
             } catch (err: unknown) {
-                console.warn(`Neon DB Sleep Timeout. Retentando em 2s... Tentativas restantes: ${retries - 1}`);
+                console.warn(`Banco indisponível. Retentando em 2s... Tentativas restantes: ${retries - 1}`);
                 retries -= 1;
                 if (retries === 0) throw err;
-                // Espera 2 segundos para o cluster acordar
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
@@ -56,33 +53,23 @@ export async function POST(req: Request) {
             throw new Error("Não foi possível acessar a base governamental após 3 tentativas.");
         }
 
-        // Motor:
-        // Iteramos cada deputado e cada voto correspondente.
-        // Se ambos == SIM ou ambos == NAO => Match = 100% naquela lei
-        // Se Deputado == ABSTENCAO/OBSTRUCAO => Match = 0% naquela lei (não decidiu na pauta)
-        // Se Ambos inversos => Match = -100%
-
+        // Pontuação: concordância = +1, discordância ou abstenção = 0
         const ranking = deputados.map(dep => {
             let scoreSoma = 0;
             let leisMensuradas = 0;
 
-            votosValidos.forEach(votoUsuario => {
+            votosValidos.forEach((votoUsuario: { proposicaoId: string; voto: string }) => {
                 const votoParlamentar = dep.votos.find(v => v.proposicaoId === parseInt(votoUsuario.proposicaoId));
 
                 if (votoParlamentar) {
                     leisMensuradas++;
-                    const parseCidadao = votoUsuario.voto.toUpperCase();
-                    const parseParla = votoParlamentar.voto.toUpperCase();
-
-                    if (parseCidadao === parseParla) {
+                    if (votoUsuario.voto.toUpperCase() === votoParlamentar.voto.toUpperCase()) {
                         scoreSoma += 1;
-                    } // Discordância pura deduz -1 (exceto se a abstenção for analisada, que por hora é peso 0 para não arruinar precisão)
+                    }
                 }
             });
 
-            // Se o parlamentar não votou em absolutamente nada da lista escolhida, zero.
             const rawScore = leisMensuradas > 0 ? (scoreSoma / leisMensuradas) : 0;
-            // Limitamos a escala entre 0% e 100% para visual limpo.
             const matchFormatado = Math.max(0, Math.round(rawScore * 100));
 
             return {
@@ -95,16 +82,15 @@ export async function POST(req: Request) {
             };
         });
 
-        // Sort Top Matches
         const topMatches = ranking.sort((a, b) => b.pontos - a.pontos).slice(0, 100);
 
         return NextResponse.json({ matches: topMatches }, { status: 200 });
 
     } catch (e: unknown) {
-        console.error("Match Engine Crashed:", e);
+        console.error("Erro no motor de match:", e);
         if (e instanceof Error) {
-            return NextResponse.json({ error: "Crash no motor relacional: " + e.message }, { status: 500 });
+            return NextResponse.json({ error: "Falha no motor relacional: " + e.message }, { status: 500 });
         }
-        return NextResponse.json({ error: "Crash inesperado no motor." }, { status: 500 });
+        return NextResponse.json({ error: "Erro inesperado no motor." }, { status: 500 });
     }
 }
