@@ -1,111 +1,188 @@
-import { ArrowUpRight, MapPin, Building2, ShieldCheck, User } from "lucide-react";
-import { PrismaClient } from "@prisma/client";
+import Image from "next/image";
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  FileText,
+  Landmark,
+  MapPin,
+  Receipt,
+  Users,
+} from "lucide-react";
+import { prisma } from "@/lib/prisma";
 import { BackButton } from "./back-button";
 import { ProfileClientTabs } from "./ProfileClientTabs";
-import Image from "next/image";
-
-const prisma = new PrismaClient();
+import { Badge, MetricTile, SurfaceCard } from "@/components/ui";
+import { formatCurrency, formatPercent, getMatchTone, getPresenceRate } from "@/lib/utils";
 
 export default async function DeputadoPerfilPage({ params }: { params: Promise<{ id: string }> }) {
-    const resolvedParams = await params;
-    const depId = parseInt(resolvedParams.id, 10);
+  const resolvedParams = await params;
+  const depId = Number.parseInt(resolvedParams.id, 10);
 
-    if (isNaN(depId)) {
-        return <div className="p-10 text-white flex justify-center h-screen items-center text-xl font-bold">Deputado não referenciado ou ID inválido.</div>;
-    }
-
-    // Busca consolidada
-    const deputado = await prisma.parlamentar.findUnique({
-        where: { id: depId },
-        include: {
-            despesas: true,
-            assiduidade: true,
-            comissoes: true
-        }
-    });
-
-    if (!deputado) {
-        return <div className="p-10 text-white flex justify-center h-screen items-center text-xl font-bold">Deputado não encontrado no banco.</div>;
-    }
-
+  if (Number.isNaN(depId)) {
     return (
-        <div className="flex flex-col min-h-full">
-            {/* Header Mínimo pra voltar */}
-            <div className="h-16 w-full px-8 pt-6">
-                <BackButton />
-            </div>
-
-            {/* Layout Principal Bi-colunado (Esquerda: Info, Direita: Dinâmico) */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-8 p-8 max-w-7xl mx-auto w-full">
-
-                {/* Coluna Esquerda: ID Card Fixo */}
-                <div className="w-full lg:w-80 flex-shrink-0">
-                    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8">
-
-                        <div className="flex flex-col items-center">
-                            <div className="w-32 h-32 rounded-full border-4 border-slate-900 shadow-[0_0_0_2px_rgba(99,102,241,0.5)] bg-slate-800 flex items-center justify-center overflow-hidden relative mb-5">
-                                {deputado.urlFoto ? (
-                                    <Image
-                                        src={deputado.urlFoto}
-                                        alt={deputado.nomeEleitoral}
-                                        fill className="object-cover object-top"
-                                        sizes="128px"
-                                        priority
-                                    />
-                                ) : (
-                                    <User className="w-12 h-12 text-slate-500" />
-                                )}
-                            </div>
-
-                            <h1 className="text-2xl font-black font-display text-white text-center mb-1 leading-snug">
-                                {deputado.nomeEleitoral}
-                            </h1>
-
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1.5 mt-2 mb-6">
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                {deputado.matchGlobal ?? 85.4}% Match {deputado.matchGlobal ? "Global" : "Provisório"}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-slate-800/60">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center">
-                                    <Building2 className="w-4 h-4 text-slate-400" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Cargo</p>
-                                    <p className="text-white font-medium text-sm">Deputado Federal</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center">
-                                    <span className="text-xs font-black text-slate-400">P</span>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Partido</p>
-                                    <p className="text-white font-medium text-sm">{deputado.partido}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center">
-                                    <MapPin className="w-4 h-4 text-slate-400" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Estado</p>
-                                    <p className="text-white font-medium text-sm">{deputado.uf}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Coluna Direita: Tabs e Conteúdo Dinâmico */}
-                <div className="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
-                    <ProfileClientTabs deputado={deputado} />
-                </div>
-            </div>
-        </div>
+      <SurfaceCard className="mx-auto mt-8 max-w-2xl">
+        <h1 className="text-2xl font-semibold text-[color:var(--ink)]">Deputado não referenciado</h1>
+        <p className="mt-3 text-[color:var(--ink-muted)]">
+          O identificador informado é inválido. Volte ao diretório de parlamentares para iniciar uma nova busca.
+        </p>
+      </SurfaceCard>
     );
+  }
+
+  const deputado = await prisma.parlamentar.findUnique({
+    where: { id: depId },
+    include: {
+      despesas: true,
+      assiduidade: true,
+      comissoes: {
+        orderBy: [{ dataInicio: "desc" }, { orgao: "asc" }],
+      },
+      _count: {
+        select: {
+          despesas: true,
+          comissoes: true,
+          proposicoes: true,
+        },
+      },
+    },
+  });
+
+  if (!deputado) {
+    return (
+      <SurfaceCard className="mx-auto mt-8 max-w-2xl">
+        <h1 className="text-2xl font-semibold text-[color:var(--ink)]">Deputado não encontrado</h1>
+        <p className="mt-3 text-[color:var(--ink-muted)]">
+          Não localizamos esse perfil no banco atual. Tente voltar para a busca e selecionar outro parlamentar.
+        </p>
+      </SurfaceCard>
+    );
+  }
+
+  const totalDespesas = deputado.despesas.reduce((acc, item) => acc + item.valor, 0);
+  const taxaPresenca = getPresenceRate(deputado.assiduidade);
+  const matchScore = deputado.matchGlobal ?? 78.4;
+  const comissaoPrincipal = deputado.comissoes[0];
+
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <BackButton />
+
+      <SurfaceCard className="overflow-hidden p-0">
+        <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="min-w-0 border-b border-[color:rgba(183,199,193,0.5)] bg-[linear-gradient(180deg,rgba(216,239,232,0.92),rgba(255,255,255,0.82))] p-5 sm:p-7 lg:border-b-0 lg:border-r">
+            <div className="flex flex-col items-start gap-4 sm:flex-row lg:flex-col">
+              <div className="relative h-28 w-28 overflow-hidden rounded-[28px] border border-[color:rgba(15,118,110,0.18)] bg-white shadow-[0_24px_48px_-30px_rgba(16,42,37,0.35)] sm:h-32 sm:w-32">
+                {deputado.urlFoto ? (
+                  <Image
+                    src={deputado.urlFoto}
+                    alt={`Foto de ${deputado.nomeEleitoral}`}
+                    fill
+                    sizes="128px"
+                    className="object-cover object-top"
+                    priority
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[color:var(--accent-strong)]">
+                    <Users className="h-10 w-10" />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 space-y-4">
+                <div className="space-y-2">
+                  <p className="vc-eyebrow">Perfil parlamentar</p>
+                  <h1 className="font-display text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
+                    {deputado.nomeEleitoral}
+                  </h1>
+                  <p className="text-base leading-7 text-[color:var(--ink-muted)]">
+                    Deputado federal por {deputado.uf}, filiado ao {deputado.partido}. Veja afinidade, presença, gastos e atuação recente em um só perfil.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone="primary">Deputado federal</Badge>
+                  <Badge tone="neutral">{deputado.partido}</Badge>
+                  <Badge tone="neutral">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {deputado.uf}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 space-y-5 p-5 sm:p-7">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="min-w-0 space-y-3">
+                <h2 className="text-xl font-semibold text-[color:var(--ink)]">Resumo do perfil</h2>
+                <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
+                  Confira primeiro afinidade, presença em plenário, gastos declarados e atividade em comissões e projetos.
+                </p>
+                {comissaoPrincipal ? (
+                  <div className="vc-panel">
+                    <p className="text-sm font-semibold text-[color:var(--ink)]">Atuação institucional recente</p>
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
+                      {comissaoPrincipal.tituloCargo} em {comissaoPrincipal.orgao}
+                      {comissaoPrincipal.dataInicio ? ` desde ${new Intl.DateTimeFormat("pt-BR").format(comissaoPrincipal.dataInicio)}` : ""}.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="vc-panel min-w-0 flex flex-col gap-3">
+                <p className="text-sm font-medium text-[color:var(--ink-muted)]">Afinidade estimada</p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-display text-5xl font-semibold leading-none text-[color:var(--ink)]">
+                      {formatPercent(matchScore, 1)}
+                    </p>
+                    <p className="mt-2 text-sm text-[color:var(--ink-soft)]">
+                      {deputado.matchGlobal ? "Baseado no cálculo disponível do app." : "Valor provisório até a simulação do usuário."}
+                    </p>
+                  </div>
+                  <Badge tone={getMatchTone(matchScore)} className="max-w-full self-start">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    {matchScore >= 75 ? "Alta afinidade" : matchScore >= 50 ? "Afinidade moderada" : "Baixa afinidade"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricTile
+                icon={Receipt}
+                label="Gasto declarado"
+                value={formatCurrency(totalDespesas)}
+                description="Soma das despesas agregadas disponíveis no banco local."
+                tone="neutral"
+              />
+              <MetricTile
+                icon={Landmark}
+                label="Comissões"
+                value={deputado._count.comissoes}
+                description="Participações cadastradas para leitura rápida da atuação institucional."
+                tone="primary"
+              />
+              <MetricTile
+                icon={FileText}
+                label="Projetos monitorados"
+                value={deputado._count.proposicoes}
+                description="Proposições autoradas que o app pode resumir e contextualizar."
+                tone="warning"
+              />
+              <MetricTile
+                icon={BriefcaseBusiness}
+                label="Presença em plenário"
+                value={taxaPresenca ? formatPercent(taxaPresenca, 0) : "Sem base"}
+                description="Percentual calculado a partir da base oficial de assiduidade."
+                tone="success"
+              />
+            </div>
+          </div>
+        </div>
+      </SurfaceCard>
+
+      <ProfileClientTabs deputado={deputado} />
+    </div>
+  );
 }

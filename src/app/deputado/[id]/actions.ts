@@ -2,15 +2,14 @@
 
 import { prisma } from "@/lib/prisma"
 
+// Busca projetos autorados pelo parlamentar — prioriza banco local, cai na API como fallback
 export async function fetchProjetosAutorados(parlamentarId: number) {
     try {
-        // Verificar se temos dados no banco (rota feliz - instantânea)
         const countLocal = await prisma.proposicaoAutor.count({
             where: { parlamentarId }
         })
 
         if (countLocal > 0) {
-            // Temos dados em cache! Retorna do DB local diretamente.
             const relacoes = await prisma.proposicaoAutor.findMany({
                 where: { parlamentarId },
                 include: {
@@ -32,10 +31,9 @@ export async function fetchProjetosAutorados(parlamentarId: number) {
                     proposicao: { ano: 'desc' }
                 }
             })
-            // Adapta o formato para o que o frontend espera
+
             return relacoes.map(r => ({
                 ...r.proposicao,
-                // Alias: o frontend usa `ementa`, o banco salva como `ementaOficial`
                 ementa: r.proposicao.ementaOficial,
                 statusProposicao: {
                     descricaoSituacao: r.proposicao.statusDescricao,
@@ -43,8 +41,7 @@ export async function fetchProjetosAutorados(parlamentarId: number) {
             }))
         }
 
-        // Fallback: nenhum dado no banco - busca da API (acontece apenas na primeira vez)
-        console.log(`[actions] Sem dados em cache para ${parlamentarId}, buscando da API...`)
+        // Fallback para a API pública da Câmara quando o banco ainda não tem dados
         const url = `https://dadosabertos.camara.leg.br/api/v2/proposicoes?idDeputadoAutor=${parlamentarId}&siglaTipo=PL&siglaTipo=PEC&ordem=DESC&ordenarPor=ano&itens=100`
         const response = await fetch(url, { next: { revalidate: 3600 } })
         if (!response.ok) throw new Error("Falha ao buscar proposicoes da API")
@@ -57,10 +54,9 @@ export async function fetchProjetosAutorados(parlamentarId: number) {
     }
 }
 
+// Busca as últimas despesas detalhadas do parlamentar diretamente na API da Câmara
 export async function fetchDespesasDetalhadas(parlamentarId: number) {
     try {
-        // Pega as despesas mais recentes (ordem DESC por padrão na API para dados paginados, vamos pegar os últimos meses)
-        // A API permite ordenar por dataDocumento DESC
         const url = `https://dadosabertos.camara.leg.br/api/v2/deputados/${parlamentarId}/despesas?ordem=DESC&ordenarPor=dataDocumento&itens=10`
         const response = await fetch(url, { next: { revalidate: 3600 } })
 
@@ -69,7 +65,7 @@ export async function fetchDespesasDetalhadas(parlamentarId: number) {
         }
 
         const data = await response.json()
-        return data.dados // Array de despesas com fornecedor, valorLiquido, tipoDespesa
+        return data.dados
     } catch (error) {
         console.error("Erro em fetchDespesasDetalhadas:", error)
         return []

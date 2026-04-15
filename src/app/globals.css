@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-outfit);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-source-serif);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f3efe4;
+  --bg-alt: #e8f0ec;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: #ffffff;
+  --border: #cad5cf;
+  --border-strong: #9fb3ab;
+  --ink: #102925;
+  --ink-muted: #476560;
+  --ink-soft: #67807a;
+  --accent: #0d6b64;
+  --accent-strong: #0a5651;
+  --accent-soft: #d7ece6;
+  --focus-ring: rgba(13, 107, 100, 0.3);
+  --success-ink: #0a654f;
+  --warning-ink: #85561c;
+  --danger-ink: #933325;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 * {
@@ -10,6 +34,122 @@
 }
 
 body {
-  /* Prevent bounce scroll on mobile for the "App" feel */
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(13, 107, 100, 0.13), transparent 28%),
+    radial-gradient(circle at top right, rgba(184, 106, 28, 0.08), transparent 24%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
+  color: var(--ink);
   overscroll-behavior-y: none;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(22, 49, 44, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 49, 44, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 85%);
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.18);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 0;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.94),
+    0 0 0 5px var(--focus-ring);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  .vc-surface {
+    @apply rounded-[28px] border p-5 shadow-[0_24px_64px_-34px_rgba(16,42,37,0.24)] backdrop-blur sm:p-6;
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .vc-panel {
+    @apply rounded-[24px] border bg-white/88 p-4 shadow-[0_14px_36px_-28px_rgba(16,42,37,0.2)] sm:p-5;
+    border-color: var(--border);
+  }
+
+  .vc-eyebrow {
+    @apply text-sm font-semibold uppercase tracking-[0.18em];
+    color: var(--accent-strong);
+  }
+
+  .vc-input,
+  .vc-select {
+    @apply min-h-12 w-full rounded-2xl border bg-white px-4 py-3 text-base text-[color:var(--ink)] transition placeholder:text-[color:var(--ink-soft)];
+    border-color: var(--border);
+  }
+
+  .vc-select {
+    @apply appearance-none pr-10;
+  }
+
+  .vc-table {
+    @apply w-full border-separate border-spacing-0 text-left;
+  }
+
+  .vc-table th {
+    @apply border-b px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em];
+    color: var(--ink-soft);
+    border-color: var(--border);
+  }
+
+  .vc-table td {
+    @apply border-b px-4 py-4 align-top text-sm;
+    border-color: rgba(183, 199, 193, 0.5);
+  }
+
+  .vc-scroll-area {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(13, 107, 100, 0.4) rgba(202, 213, 207, 0.45);
+  }
+
+  .vc-scroll-area::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .vc-scroll-area::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgba(202, 213, 207, 0.45);
+  }
+
+  .vc-scroll-area::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(13, 107, 100, 0.38);
+  }
+
+  .vc-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(13, 107, 100, 0.5);
+  }
 }

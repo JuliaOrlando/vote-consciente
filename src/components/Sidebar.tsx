@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, BarChart2, Info, UserCheck, ShieldCheck } from "lucide-react";
+import { Home, BarChart2, Info, UserCheck, ShieldCheck } from "lucide-react";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -17,7 +17,7 @@ export function Sidebar() {
 
     return (
         <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-full flex-shrink-0">
-            {/* Logo Area */}
+            {/* Logo  */}
             <div className="p-6 pb-8 border-b border-slate-800/50">
                 <Link href="/" className="flex items-center gap-2 group">
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center relative overflow-hidden">
@@ -29,7 +29,7 @@ export function Sidebar() {
                 </Link>
             </div>
 
-            {/* Navigation Links */}
+            {/* Links */}
             <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
                 {links.map((link) => {
                     const isActive = pathname === link.href;
@@ -51,7 +51,7 @@ export function Sidebar() {
                 })}
             </nav>
 
-            {/* Footer / User Badge */}
+            {/* Footer */}
             <div className="p-4 border-t border-slate-800/50">
                 <div className="bg-slate-900 rounded-xl p-3 flex items-center gap-3 border border-slate-800">
                     <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
