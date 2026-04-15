@@ -2,8 +2,6 @@
 
 Um projeto Next.js que ajuda a acompanhar e investigar a atuação, votos e proposições dos deputados federais brasileiros.
 
-## 🚀 Como rodar o projeto localmente
-
 ### 1. Clonar o repositório e instalar dependências
 
 ```bash
@@ -19,10 +17,6 @@ Crie um arquivo `.env` na raiz do projeto, baseado no `.env.example`:
 ```bash
 cp .env.example .env
 ```
-*(No Windows, você pode simplesmente copiar e colar o arquivo no Explorador de Arquivos e renomeá-lo para `.env`)*
-
-Abra o arquivo `.env` e configure a variável **`DATABASE_URL`** com a URL do seu banco de dados PostgreSQL (pode ser um banco local, Supabase, NeonDB, etc.).
-> ⚠️ **Atenção:** O projeto utiliza busca semântica, o que exige que o PostgreSQL utilizado tenha a extensão **`pgvector`** suportada.
 
 ### 3. Configurar o Banco de Dados (Prisma)
 
