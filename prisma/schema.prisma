@@ -29,11 +29,17 @@ model Proposicao {
   statusDescricao   String?                      @map("status_descricao")
   idSituacao        Int?                         @map("id_situacao")
   apelidoIa         String?                      @map("apelido_ia")
-  keywords          String?                      // Ex: "redução, jornada de trabalho, qualidade de vida"
+  keywords          String? // Ex: "redução, jornada de trabalho, qualidade de vida"
   ementaOficial     String                       @map("ementa_oficial")
   resumoCidadao     String?                      @map("resumo_cidadao")
   categoria         String?
   rankingRelevancia Int                          @default(0) @map("ranking_relevancia")
+  // Provenância da votação escolhida para exibição (resultado definitivo vs. parcial).
+  // Ver vault/data-sources/06_voting_definitive.md.
+  votacaoId         String?                      @map("votacao_id")
+  votacaoStage      String?                      @map("votacao_stage") // descrição/etapa da sessão exibida
+  votacaoFinalizada Boolean                      @default(false) @map("votacao_finalizada")
+  votacaoData       DateTime?                    @map("votacao_data")
   // Using Unsupported for pgvector type. Prisma supports it via raw queries.
   embedding         Unsupported("vector(1536)")?
   votosUsuarios     VotoUsuario[]
@@ -51,6 +57,10 @@ model Parlamentar {
   statusMandato String                  @map("status_mandato")
   urlFoto       String?                 @map("url_foto")
   matchGlobal   Float?                  @map("match_global")
+  // false = parlamentar de legislatura anterior, mantido apenas para aparecer em
+  // votações históricas (nome+foto+partido). Não recebe dados completos. Ver
+  // vault/data-sources/06_voting_definitive.md.
+  ativo         Boolean                 @default(true)
   votos         VotoParlamentar[]
   despesas      Despesa[]
   assiduidade   AssiduidadeParlamentar?

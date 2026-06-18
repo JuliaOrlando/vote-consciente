@@ -43,6 +43,8 @@ const getCachedDeputadosDirectory = unstable_cache(
     }
 
     return prisma.parlamentar.findMany({
+      // Exclui parlamentares inativos (mantidos apenas para votações históricas).
+      where: { ativo: true },
       orderBy: { nomeEleitoral: "asc" },
     });
   },

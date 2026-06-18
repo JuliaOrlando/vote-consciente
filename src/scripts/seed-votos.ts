@@ -20,7 +20,13 @@ type CandidateProposition = {
 };
 
 type VoteRecord = {
-  deputado_: { id: number };
+  deputado_: {
+    id: number;
+    nome?: string;
+    siglaPartido?: string;
+    siglaUf?: string;
+    urlFoto?: string | null;
+  };
   tipoVoto: string;
 };
 
@@ -28,7 +34,41 @@ type VotingSession = {
   id: string;
   data?: string | null;
   dataHoraRegistro?: string | null;
+  descricao?: string | null;
 };
+
+// Classificação da sessão de votação a partir da descrição oficial.
+// Objetivo: distinguir o voto DEFINITIVO sobre o texto da proposição das inúmeras
+// votações procedimentais (requerimentos, destaques, emendas). Ver
+// vault/data-sources/06_voting_definitive.md.
+type VoteKind = "main" | "procedural";
+
+const LEADING = /^\s*(aprovad[oa]|rejeitad[oa]|mantid[oa]|suprimid[oa]|prejudicad[oa]|concedid[oa]|declarad[oa]|retirad[oa]|inadmitid[oa])\b[,\s]*(?:em\s+\w+\s+turno[,\s]*)?(?:o |a |os |as )?/i;
+const PROCEDURAL_SUBJECT = /^(requerimento|recurso|quest[aã]o de ordem|destaque|texto\b|admissibilidade|retirada de pauta|adiamento|encerramento|ordem dos trabalhos|vota[cç][aã]o (?:nominal|parcelada|em globo)|audi[eê]ncia|emenda(?!.*substitut))/i;
+
+function classifyVote(descricao: string | null | undefined): { kind: VoteKind; score: number } {
+  const desc = (descricao || "").trim();
+  const subject = desc.replace(LEADING, "");
+  const full = desc.toLowerCase();
+
+  // Procedimental: requerimentos, destaques ("mantido o texto"), emendas avulsas, etc.
+  if (PROCEDURAL_SUBJECT.test(subject)) {
+    return { kind: "procedural", score: -1000 };
+  }
+
+  // Texto principal: pontua por etapa (quanto mais final, maior).
+  let score = 0;
+  if (/reda[cç][aã]o final/i.test(subject)) score = 95;
+  else if (/proposta de emenda à constitui[cç][aã]o|\bpec\b/i.test(subject)) {
+    score = /segundo turno/i.test(full) ? 100 : /primeiro turno/i.test(full) ? 90 : 88;
+  } else if (/substitut/i.test(subject)) score = 85; // substitutivo / subemenda substitutiva global
+  else if (/projeto de lei|projeto de decreto|\bprojeto\b/i.test(subject)) score = 80;
+  else if (/parecer/i.test(subject)) score = 60;
+  else if (/\bmat[eé]ria\b/i.test(subject)) score = 55;
+  else return { kind: "procedural", score: -500 }; // genérico (ex.: "Aprovado.") -> não é texto principal
+
+  return { kind: "main", score };
+}
 
 type PropositionResult =
   | { status: "synced"; proposition: CandidateProposition; inserted: number }
@@ -151,53 +191,124 @@ async function selectCandidates(limit: number, recheckDays: number, force: boole
   return { progress, candidates: eligible };
 }
 
-async function fetchLatestNominalVotes(propositionId: number) {
+type SelectedVote = {
+  records: VoteRecord[];
+  votingDate: string;
+  votacaoId: string;
+  descricao: string;
+  finalizada: boolean;
+};
+
+function sessionTime(session: VotingSession) {
+  return new Date(session.dataHoraRegistro || session.data || 0).getTime();
+}
+
+async function fetchSessionVotes(sessionId: string) {
+  const votesData = await fetchJson<{ dados?: VoteRecord[] }>(
+    `${CAMARA_API_URL}/votacoes/${sessionId}/votos`
+  );
+  return Array.isArray(votesData.dados) ? votesData.dados : [];
+}
+
+/**
+ * Seleciona o voto DEFINITIVO de uma proposição (regra de 3 níveis):
+ *  1. Voto sobre o texto principal (definitivo)        -> finalizada = true
+ *  2. Sem voto principal, mas há votação nominal        -> última nominal, finalizada = false
+ *  3. Nenhuma votação nominal                           -> null
+ * Antes filtra para as sessões DA PRÓPRIA proposição (o id da votação é
+ * "{idProposiçãoObjeto}-{seq}"), descartando votações de outras proposições que a
+ * API retorna por terem ocorrido nos mesmos eventos.
+ */
+async function selectDefinitiveVote(propositionId: number): Promise<SelectedVote | null> {
   const votingData = await fetchJson<{ dados?: VotingSession[] }>(
     `${CAMARA_API_URL}/proposicoes/${propositionId}/votacoes`
   );
-  const sessions = Array.isArray(votingData.dados) ? votingData.dados : [];
+  const all = Array.isArray(votingData.dados) ? votingData.dados : [];
 
-  const sortedSessions = [...sessions].sort((a, b) => {
-    const aValue = new Date(a.dataHoraRegistro || a.data || 0).getTime();
-    const bValue = new Date(b.dataHoraRegistro || b.data || 0).getTime();
-    return bValue - aValue;
-  });
+  // 1. apenas votações da própria proposição
+  const own = all.filter((s) => String(s.id).split("-")[0] === String(propositionId));
 
-  for (const session of sortedSessions) {
-    const votesData = await fetchJson<{ dados?: VoteRecord[] }>(
-      `${CAMARA_API_URL}/votacoes/${session.id}/votos`
-    );
-    const records = Array.isArray(votesData.dados) ? votesData.dados : [];
+  // 2. candidatas a texto principal, ordenadas por (etapa mais final, mais recente)
+  const mainCandidates = own
+    .map((s) => ({ session: s, ...classifyVote(s.descricao) }))
+    .filter((c) => c.kind === "main")
+    .sort((a, b) => b.score - a.score || sessionTime(b.session) - sessionTime(a.session));
 
+  for (const candidate of mainCandidates.slice(0, 6)) {
+    const records = await fetchSessionVotes(candidate.session.id);
+    if (records.length > 0) {
+      return {
+        records,
+        votingDate: candidate.session.data || candidate.session.dataHoraRegistro || new Date().toISOString(),
+        votacaoId: candidate.session.id,
+        descricao: candidate.session.descricao || "",
+        finalizada: true,
+      };
+    }
+    await sleep(120);
+  }
+
+  // 3. fallback: votação ainda não finalizada -> última sessão nominal disponível
+  const byRecency = [...own].sort((a, b) => sessionTime(b) - sessionTime(a));
+  for (const session of byRecency) {
+    const records = await fetchSessionVotes(session.id);
     if (records.length > 0) {
       return {
         records,
         votingDate: session.data || session.dataHoraRegistro || new Date().toISOString(),
+        votacaoId: session.id,
+        descricao: session.descricao || "",
+        finalizada: false,
       };
     }
-
     await sleep(120);
   }
 
   return null;
 }
 
+// Garante que o parlamentar exista na base. Se não existir (votou em legislatura
+// anterior e não está mais em exercício), cria um registro LEVE (nome+foto+partido)
+// marcado como inativo, apenas para aparecer corretamente nos resultados de votação.
+async function ensureParlamentar(record: VoteRecord) {
+  const dep = record.deputado_;
+  await prisma.parlamentar.upsert({
+    where: { id: dep.id },
+    update: {}, // não toca em parlamentares já existentes (ativos)
+    create: {
+      id: dep.id,
+      nomeEleitoral: dep.nome || `Deputado ${dep.id}`,
+      partido: dep.siglaPartido || "Sem Partido",
+      uf: dep.siglaUf || "XX",
+      statusMandato: "Fora de exercício",
+      urlFoto: dep.urlFoto || `https://www.camara.leg.br/internet/deputado/bandep/${dep.id}.jpg`,
+      ativo: false,
+    },
+  });
+}
+
 async function syncPropositionVotes(proposition: CandidateProposition): Promise<PropositionResult> {
   try {
-    const nominalVotes = await fetchLatestNominalVotes(proposition.id);
+    const definitiveVote = await selectDefinitiveVote(proposition.id);
 
-    if (!nominalVotes) {
+    if (!definitiveVote) {
+      // Nível 3: nenhuma votação nominal. Registra que não há votação.
+      await prisma.proposicao.update({
+        where: { id: proposition.id },
+        data: { votacaoId: null, votacaoStage: null, votacaoFinalizada: false, votacaoData: null },
+      });
       return { status: "no-nominal-votes", proposition };
     }
 
-    const votingDate = new Date(nominalVotes.votingDate);
+    const votingDate = new Date(definitiveVote.votingDate);
     let inserted = 0;
 
-    for (const record of nominalVotes.records) {
+    for (const record of definitiveVote.records) {
       const parlamentarId = record.deputado_?.id;
       if (!Number.isFinite(parlamentarId)) continue;
 
       try {
+        await ensureParlamentar(record);
         await prisma.votoParlamentar.upsert({
           where: {
             parlamentarId_proposicaoId: {
@@ -218,9 +329,20 @@ async function syncPropositionVotes(proposition: CandidateProposition): Promise<
         });
         inserted++;
       } catch {
-        // Suplentes e registros fora da base local continuam sendo ignorados.
+        // Registros sem id válido continuam sendo ignorados.
       }
     }
+
+    // Provenância: qual sessão foi exibida e se é o resultado definitivo.
+    await prisma.proposicao.update({
+      where: { id: proposition.id },
+      data: {
+        votacaoId: definitiveVote.votacaoId,
+        votacaoStage: definitiveVote.descricao || null,
+        votacaoFinalizada: definitiveVote.finalizada,
+        votacaoData: votingDate,
+      },
+    });
 
     return { status: "synced", proposition, inserted };
   } catch (error) {
@@ -253,10 +375,19 @@ async function seedVotes() {
   const recheckDays = parseNumberFlag("--recheck-days", DEFAULT_RECHECK_DAYS);
   const force = hasFlag("--force");
   const resetProgress = hasFlag("--reset-progress");
+  const reseed = hasFlag("--reseed");
 
-  if (resetProgress) {
+  if (resetProgress || reseed) {
     await ensureProgressDir();
     await fs.rm(PROGRESS_FILE, { force: true });
+  }
+
+  if (reseed) {
+    // Os votos anteriores foram coletados com o seletor antigo (sessão mais recente,
+    // não a definitiva) e estão misturados entre sessões. Apaga tudo para recoletar
+    // de forma correta. Ver vault/data-sources/06_voting_definitive.md.
+    const removed = await prisma.votoParlamentar.deleteMany({});
+    console.log(`🧹 --reseed: ${removed.count} votos antigos (potencialmente incorretos) removidos.`);
   }
 
   console.log("\n====================================================");
@@ -337,11 +468,19 @@ async function seedVotes() {
   console.log("====================================================\n");
 }
 
-seedVotes()
-  .catch((error) => {
-    console.error("❌ Falha crítica no seed de votos:", error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Exporta peças reutilizáveis (testes/scripts pontuais) sem disparar o seed completo.
+export { prisma, classifyVote, selectDefinitiveVote, syncPropositionVotes };
+
+// Só executa o seed quando o arquivo é rodado diretamente (e não quando importado).
+const isDirectRun = Boolean(process.argv[1] && /seed-votos\.(ts|js)$/.test(process.argv[1]));
+
+if (isDirectRun) {
+  seedVotes()
+    .catch((error) => {
+      console.error("❌ Falha crítica no seed de votos:", error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
