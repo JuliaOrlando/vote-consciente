@@ -130,13 +130,23 @@ function candidateScore(proposition: CandidateProposition) {
   );
 }
 
-async function fetchJson<T>(url: string) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} em ${url}`);
-  }
+async function fetchJson<T>(url: string, retries = 4) {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url);
 
-  return (await response.json()) as T;
+    // 429 (rate limit) e 5xx são transitórios: espera com backoff e tenta de novo.
+    if ((response.status === 429 || response.status >= 500) && attempt < retries) {
+      const waitMs = 1500 * (attempt + 1);
+      await sleep(waitMs);
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} em ${url}`);
+    }
+
+    return (await response.json()) as T;
+  }
 }
 
 async function ensureProgressDir() {
