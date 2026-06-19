@@ -50,8 +50,10 @@ npx ts-node src/scripts/update-fotos.ts
 # Popula projetos e proposições 
 npx ts-node src/scripts/seed-todas-proposicoes.ts
 
-# Popula presenças, assiduidades e comissões (opcional)
-npx ts-node src/scripts/seed-assiduidade.ts
+# Popula votos parlamentares (resultado definitivo de cada proposição)
+npx ts-node src/scripts/seed-votos.ts
+
+# Popula comissões (opcional)
 npx ts-node src/scripts/seed-comissoes.ts
 ```
 

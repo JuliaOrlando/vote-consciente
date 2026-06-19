@@ -63,7 +63,6 @@ model Parlamentar {
   ativo         Boolean                 @default(true)
   votos         VotoParlamentar[]
   despesas      Despesa[]
-  assiduidade   AssiduidadeParlamentar?
   comissoes     CargoComissao[]
   proposicoes   ProposicaoAutor[]
 
@@ -80,18 +79,6 @@ model ProposicaoAutor {
 
   @@unique([proposicaoId, parlamentarId])
   @@map("proposicao_autor")
-}
-
-model AssiduidadeParlamentar {
-  id                       String @id @default(uuid())
-  parlamentarId            Int    @unique @map("parlamentar_id")
-  sessoesPresente          Int    @map("sessoes_presente")
-  faltasJustificadas       Int    @map("faltas_justificadas")
-  ausenciasNaoJustificadas Int    @map("ausencias_nao_justificadas")
-
-  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
-
-  @@map("assiduidade_parlamentar")
 }
 
 model CargoComissao {
@@ -144,4 +131,22 @@ model Despesa {
   parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
 
   @@map("despesa")
+}
+
+// Tabela de resultados AGREGADOS por sessão de votação, mantida por outra pessoa do
+// time (pipeline paralelo). Modelada aqui só para o Prisma reconhecê-la e NÃO removê-la
+// em `db push`. Sem relação/FK de propósito para não alterar a tabela existente.
+// Não usada pelo código deste app. Ver vault/data-sources/06_voting_definitive.md.
+model Votacao {
+  id           String    @id
+  proposicaoId Int       @map("proposicao_id")
+  descricao    String
+  tipo         String?
+  dataHoraVoto DateTime  @map("data_hora_voto")
+  votosNao     Int       @map("votos_nao")
+  votosOutros  Int       @map("votos_outros")
+  votosSim     Int       @map("votos_sim")
+  orgao        String?
+
+  @@map("votacao")
 }
