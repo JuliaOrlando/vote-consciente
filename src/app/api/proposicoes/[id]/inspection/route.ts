@@ -12,7 +12,7 @@ const getCachedInspection = unstable_cache(
   async (proposicaoId: number): Promise<ProposicaoInspectionData | null> => {
     const proposition = await prisma.proposicao.findUnique({
       where: { id: proposicaoId },
-      select: { id: true },
+      select: { id: true, votacaoFinalizada: true, votacaoStage: true },
     });
 
     if (!proposition) {
@@ -30,6 +30,8 @@ const getCachedInspection = unstable_cache(
             nomeEleitoral: true,
             partido: true,
             uf: true,
+            urlFoto: true,
+            ativo: true,
           },
         },
       },
@@ -72,6 +74,8 @@ const getCachedInspection = unstable_cache(
           uf: vote.parlamentar.uf,
           voto: vote.voto,
           dataVoto: vote.dataVoto.toISOString(),
+          urlFoto: vote.parlamentar.urlFoto,
+          ativo: vote.parlamentar.ativo,
         };
       })
       .sort(
@@ -128,6 +132,8 @@ const getCachedInspection = unstable_cache(
 
     return {
       proposicaoId,
+      votacaoFinalizada: proposition.votacaoFinalizada,
+      votacaoStage: proposition.votacaoStage,
       totalDeputyVotes,
       voteBreakdown,
       partyBreakdown,
@@ -136,7 +142,7 @@ const getCachedInspection = unstable_cache(
       unavailableData,
     };
   },
-  ["simulador-proposicao-inspection-v1"],
+  ["simulador-proposicao-inspection-v2"],
   { revalidate: 3600 }
 );
 

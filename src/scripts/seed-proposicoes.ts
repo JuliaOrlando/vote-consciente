@@ -35,6 +35,9 @@ async function fetchProposicoes() {
                         },
                         create: {
                             id: prop.id,
+                            siglaTipo: prop.siglaTipo,
+                            numero: prop.numero,
+                            ano: prop.ano,
                             numOficial: `${prop.siglaTipo} ${prop.numero}/${prop.ano}`,
                             apelidoIa: `${prop.siglaTipo} ${prop.numero}/${prop.ano}`,
                             ementaOficial: prop.ementa,

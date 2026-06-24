@@ -34,6 +34,9 @@ export async function POST(req: Request) {
         while (retries > 0) {
             try {
                 deputados = await prisma.parlamentar.findMany({
+                    // Apenas parlamentares em exercício entram no ranking de match.
+                    // Inativos existem só para aparecer em votações históricas.
+                    where: { ativo: true },
                     include: {
                         votos: {
                             where: { proposicaoId: { in: idsPropostas } }

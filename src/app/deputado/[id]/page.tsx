@@ -1,7 +1,6 @@
 import Image from "next/image";
 import {
   BadgeCheck,
-  BriefcaseBusiness,
   FileText,
   Landmark,
   MapPin,
@@ -12,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { BackButton } from "./back-button";
 import { ProfileClientTabs } from "./ProfileClientTabs";
 import { Badge, MetricTile, SurfaceCard } from "@/components/ui";
-import { formatCurrency, formatPercent, getMatchTone, getPresenceRate } from "@/lib/utils";
+import { formatCurrency, formatPercent, getMatchTone } from "@/lib/utils";
 
 export default async function DeputadoPerfilPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -33,7 +32,6 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
     where: { id: depId },
     include: {
       despesas: true,
-      assiduidade: true,
       comissoes: {
         orderBy: [{ dataInicio: "desc" }, { orgao: "asc" }],
       },
@@ -59,7 +57,6 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
   }
 
   const totalDespesas = deputado.despesas.reduce((acc, item) => acc + item.valor, 0);
-  const taxaPresenca = getPresenceRate(deputado.assiduidade);
   const matchScore = deputado.matchGlobal ?? 78.4;
   const comissaoPrincipal = deputado.comissoes[0];
 
@@ -95,7 +92,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                     {deputado.nomeEleitoral}
                   </h1>
                   <p className="text-base leading-7 text-[color:var(--ink-muted)]">
-                    Deputado federal por {deputado.uf}, filiado ao {deputado.partido}. Veja afinidade, presença, gastos e atuação recente em um só perfil.
+                    Deputado federal por {deputado.uf}, filiado ao {deputado.partido}. Veja afinidade, gastos e atuação recente em um só perfil.
                   </p>
                 </div>
 
@@ -116,7 +113,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
               <div className="min-w-0 space-y-3">
                 <h2 className="text-xl font-semibold text-[color:var(--ink)]">Resumo do perfil</h2>
                 <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
-                  Confira primeiro afinidade, presença em plenário, gastos declarados e atividade em comissões e projetos.
+                  Confira primeiro afinidade, gastos declarados e atividade em comissões e projetos.
                 </p>
                 {comissaoPrincipal ? (
                   <div className="vc-panel">
@@ -148,7 +145,7 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <MetricTile
                 icon={Receipt}
                 label="Gasto declarado"
@@ -169,13 +166,6 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                 value={deputado._count.proposicoes}
                 description="Proposições autoradas que o app pode resumir e contextualizar."
                 tone="warning"
-              />
-              <MetricTile
-                icon={BriefcaseBusiness}
-                label="Presença em plenário"
-                value={taxaPresenca ? formatPercent(taxaPresenca, 0) : "Sem base"}
-                description="Percentual calculado a partir da base oficial de assiduidade."
-                tone="success"
               />
             </div>
           </div>

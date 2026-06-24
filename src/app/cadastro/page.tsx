@@ -2,17 +2,23 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, Eye, EyeOff, FileText, Loader2, Lock, Mail, User, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, Camera, Eye, EyeOff, FileText, Loader2, Lock, Mail, User, Users } from "lucide-react";
 import { buttonStyles, SurfaceCard } from "@/components/ui";
+import { register, syncVotesAfterLogin } from "@/lib/auth-client";
 
-// Tela de cadastro placeholder — inclui upload de foto para demonstração da Parte 1
 export default function CadastroPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Pré-visualiza a foto escolhida sem enviar para nenhum servidor
+  // Pré-visualiza a foto escolhida (a foto ainda não é persistida no backend).
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -21,11 +27,21 @@ export default function CadastroPage() {
     reader.readAsDataURL(file);
   };
 
-  // Simula envio sem backend real
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => setLoading(false), 1800);
+
+    const result = await register(nome, email, senha);
+    if (!result.ok) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+
+    await syncVotesAfterLogin();
+    router.push("/perfil");
+    router.refresh();
   };
 
   return (
@@ -47,6 +63,15 @@ export default function CadastroPage() {
         </div>
 
         <SurfaceCard className="space-y-5 p-6 sm:p-8">
+          {error ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-2xl border border-[color:rgba(176,57,38,0.22)] bg-[color:rgba(176,57,38,0.06)] p-3 text-sm text-[color:var(--danger-ink)]"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Upload de foto de perfil */}
             <div className="flex flex-col items-center gap-3">
@@ -97,6 +122,8 @@ export default function CadastroPage() {
                 <input
                   id="cadastro-nome"
                   type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu nome"
                   required
                   autoComplete="name"
@@ -113,6 +140,8 @@ export default function CadastroPage() {
                 <input
                   id="cadastro-email"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
                   autoComplete="email"
@@ -129,6 +158,8 @@ export default function CadastroPage() {
                 <input
                   id="cadastro-senha"
                   type={showPassword ? "text" : "password"}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
                   required
                   minLength={8}

@@ -31,22 +31,6 @@ export function formatPercent(value?: number | null, digits = 0) {
   return `${value.toFixed(digits)}%`;
 }
 
-export function getPresenceRate(assiduidade?: {
-  sessoesPresente: number;
-  faltasJustificadas: number;
-  ausenciasNaoJustificadas: number;
-} | null) {
-  if (!assiduidade) return null;
-
-  const total =
-    assiduidade.sessoesPresente +
-    assiduidade.faltasJustificadas +
-    assiduidade.ausenciasNaoJustificadas;
-
-  if (total === 0) return null;
-  return (assiduidade.sessoesPresente / total) * 100;
-}
-
 export function getProjectStatusTone(status: string, idSituacao?: number | null) {
   const normalized = status.toLowerCase();
 

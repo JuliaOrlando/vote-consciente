@@ -2,21 +2,37 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, FileText, Loader2, Lock, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, Eye, EyeOff, FileText, Loader2, Lock, Mail } from "lucide-react";
 import { buttonStyles, SurfaceCard } from "@/components/ui";
+import { login, syncVotesAfterLogin } from "@/lib/auth-client";
 
-// Tela de login — placeholder para apresentação da Parte 1
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  // Simula um login sem autenticação real
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
+
+    const result = await login(email, password);
+    if (!result.ok) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+
+    // Leva os votos locais para a conta antes de navegar.
+    await syncVotesAfterLogin();
+
+    const redirect = new URLSearchParams(window.location.search).get("redirect");
+    router.push(redirect && redirect.startsWith("/") ? redirect : "/perfil");
+    router.refresh();
   };
 
   return (
@@ -39,6 +55,15 @@ export default function LoginPage() {
 
         {/* Formulário */}
         <SurfaceCard className="space-y-5 p-6 sm:p-8">
+          {error ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-2xl border border-[color:rgba(176,57,38,0.22)] bg-[color:rgba(176,57,38,0.06)] p-3 text-sm text-[color:var(--danger-ink)]"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <label className="block space-y-2">
@@ -109,11 +134,13 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-[color:var(--border)]" />
           </div>
 
-          {/* Login social placeholder */}
+          {/* Login social — ainda não implementado (placeholder visual) */}
           <button
             id="btn-login-google"
             type="button"
-            className={buttonStyles({ variant: "secondary", size: "md", className: "w-full" })}
+            disabled
+            title="Login com Google em breve"
+            className={buttonStyles({ variant: "secondary", size: "md", className: "w-full opacity-60" })}
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
               <path

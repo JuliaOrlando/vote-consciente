@@ -17,21 +17,15 @@ import {
   formatCurrency,
   formatDate,
   formatPercent,
-  getPresenceRate,
   getProjectStatusTone,
 } from "@/lib/utils";
 
-type TabId = "overview" | "projetos" | "gastos" | "presenca";
+type TabId = "overview" | "projetos" | "gastos";
 
 type DeputadoProfileData = {
   id: number;
   matchGlobal: number | null;
   despesas: Array<{ tipoMesAno: string; valor: number }>;
-  assiduidade: {
-    sessoesPresente: number;
-    faltasJustificadas: number;
-    ausenciasNaoJustificadas: number;
-  } | null;
   _count?: {
     despesas: number;
   };
@@ -65,7 +59,6 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "overview", label: "Visão geral" },
   { id: "projetos", label: "Votações e projetos" },
   { id: "gastos", label: "Gastos" },
-  { id: "presenca", label: "Presença" },
 ];
 
 function getProjectStatus(status: string, idSituacao?: number | null) {
@@ -148,7 +141,6 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
   }, [deputado.id]);
 
   const totalDespesas = deputado.despesas?.reduce((acc: number, curr: { valor: number }) => acc + curr.valor, 0) || 0;
-  const taxaPresenca = getPresenceRate(deputado.assiduidade);
   const ultimaDespesa = despesasLista[0]?.dataDocumento;
   const despesasRecentes = despesasLista.slice(0, 3);
 
@@ -235,13 +227,6 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
                   value={formatPercent(deputado.matchGlobal ?? 78.4, 1)}
                   description="Sinal rápido para comparação com o seu posicionamento quando disponível."
                   tone="primary"
-                />
-                <MetricTile
-                  icon={CalendarCheck}
-                  label="Presença calculada"
-                  value={taxaPresenca ? formatPercent(taxaPresenca, 0) : "Sem base"}
-                  description="Percentual derivado da soma de presenças e ausências registradas."
-                  tone="success"
                 />
                 <MetricTile
                   icon={FileText}
@@ -573,89 +558,6 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
           </div>
         ) : null}
 
-        {activeTab === "presenca" ? (
-          deputado.assiduidade ? (
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.85fr)]">
-              <SurfaceCard className="space-y-5">
-                <div className="space-y-2">
-                  <p className="vc-eyebrow">Assiduidade</p>
-                  <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Presença registrada em plenário</h2>
-                  <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
-                    A leitura foi simplificada para mostrar percentual, presença efetiva e ausências justificadas ou não justificadas sem depender só de cor.
-                  </p>
-                </div>
-
-                <div className="vc-panel space-y-4">
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[color:var(--ink-muted)]">Taxa calculada</p>
-                      <p className="font-display text-5xl font-semibold text-[color:var(--ink)]">
-                        {taxaPresenca ? formatPercent(taxaPresenca, 0) : "Sem base"}
-                      </p>
-                    </div>
-                    <Badge tone="success">Base oficial da Câmara</Badge>
-                  </div>
-
-                  <div
-                    aria-label="Barra de presença"
-                    role="progressbar"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={taxaPresenca ? Math.round(taxaPresenca) : 0}
-                    className="h-4 overflow-hidden rounded-full bg-[color:#d8e2dd]"
-                  >
-                    <div
-                      className="h-full rounded-full bg-[linear-gradient(90deg,#0f766e,#34a38d)]"
-                      style={{ width: `${taxaPresenca ?? 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <MetricTile
-                    icon={CalendarCheck}
-                    label="Sessões presente"
-                    value={deputado.assiduidade.sessoesPresente}
-                    description="Participações confirmadas em plenário."
-                    tone="success"
-                  />
-                  <MetricTile
-                    icon={CalendarCheck}
-                    label="Faltas justificadas"
-                    value={deputado.assiduidade.faltasJustificadas}
-                    description="Ausências registradas com justificativa."
-                    tone="warning"
-                  />
-                  <MetricTile
-                    icon={CalendarCheck}
-                    label="Ausências não justificadas"
-                    value={deputado.assiduidade.ausenciasNaoJustificadas}
-                    description="Faltas sem justificativa na base disponível."
-                    tone="danger"
-                  />
-                </div>
-              </SurfaceCard>
-
-              <SurfaceCard className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[color:var(--ink-muted)]">Leitura cidadã</p>
-                  <h2 className="text-2xl font-semibold text-[color:var(--ink)]">Como interpretar</h2>
-                </div>
-                <ul className="space-y-3 text-sm leading-7 text-[color:var(--ink-muted)]">
-                  <li className="vc-panel">Presença alta sugere participação consistente nas sessões registradas.</li>
-                  <li className="vc-panel">Faltas justificadas não têm o mesmo significado de ausência sem justificativa.</li>
-                  <li className="vc-panel">Este indicador deve ser lido junto com projetos, votações e atuação em comissões.</li>
-                </ul>
-              </SurfaceCard>
-            </div>
-          ) : (
-            <EmptyState
-              icon={CalendarCheck}
-              title="Dados de presença indisponíveis"
-              description="A base atual não retornou informações de assiduidade para este perfil. As outras áreas do mandato continuam acessíveis."
-            />
-          )
-        ) : null}
       </div>
     </div>
   );

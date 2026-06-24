@@ -353,7 +353,29 @@ export default function ProposicaoDetailPage() {
               ) : (
                 <Badge tone="neutral">Sem votos nominais nesta fonte</Badge>
               )}
+              {inspectionData.totalDeputyVotes > 0 ? (
+                inspectionData.votacaoFinalizada ? (
+                  <Badge tone="primary">Resultado definitivo</Badge>
+                ) : (
+                  <Badge tone="warning">Votação em tramitação</Badge>
+                )
+              ) : null}
             </div>
+
+            {inspectionData.totalDeputyVotes > 0 && !inspectionData.votacaoFinalizada ? (
+              <div className="flex items-start gap-2 rounded-2xl border border-[color:rgba(217,119,6,0.3)] bg-[color:rgba(251,191,36,0.08)] p-3 text-sm text-[color:var(--ink-muted)]">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[color:#b45309]" />
+                <p>
+                  A votação desta proposição <strong>ainda não foi concluída</strong>. Exibimos o
+                  resultado da votação mais recente disponível, que pode não refletir o desfecho final.
+                  {inspectionData.votacaoStage ? (
+                    <span className="mt-1 block text-xs text-[color:var(--ink-soft)]">
+                      Etapa exibida: {inspectionData.votacaoStage}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+            ) : null}
 
             {voteBreakdown.length > 0 ? (
               <div className="space-y-4">
@@ -498,6 +520,11 @@ export default function ProposicaoDetailPage() {
                               <tr key={`${vote.parlamentarId}-${vote.voto}-${vote.dataVoto}`}>
                                 <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 font-medium text-[color:var(--ink)]">
                                   {vote.nomeEleitoral}
+                                  {!vote.ativo ? (
+                                    <span className="ml-2 rounded-md bg-[color:rgba(159,179,171,0.2)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--ink-soft)]">
+                                      não está mais em exercício
+                                    </span>
+                                  ) : null}
                                 </td>
                                 <td className="border-b border-[color:rgba(183,199,193,0.5)] px-3 py-2 text-[color:var(--ink-muted)]">
                                   {vote.partido}/{vote.uf}

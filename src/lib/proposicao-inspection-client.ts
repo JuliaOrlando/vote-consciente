@@ -1,6 +1,6 @@
 import type { ProposicaoInspectionData } from "@/lib/proposicao-inspection";
 
-export const PROPOSICAO_INSPECTION_SESSION_CACHE_KEY = "proposicaoInspectionCache:v1";
+export const PROPOSICAO_INSPECTION_SESSION_CACHE_KEY = "proposicaoInspectionCache:v2";
 
 export type ProposicaoInspectionCacheMap = Record<number, ProposicaoInspectionData>;
 

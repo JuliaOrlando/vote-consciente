@@ -21,10 +21,15 @@ export type ProposicaoInspectionDeputyVote = {
   uf: string;
   voto: string;
   dataVoto: string;
+  urlFoto: string | null;
+  ativo: boolean; // false = não está mais em exercício (votou em legislatura anterior)
 };
 
 export type ProposicaoInspectionData = {
   proposicaoId: number;
+  // Provenância da votação exibida. Ver vault/data-sources/06_voting_definitive.md.
+  votacaoFinalizada: boolean; // true = resultado definitivo; false = votação ainda em curso
+  votacaoStage: string | null; // descrição da sessão exibida (etapa)
   totalDeputyVotes: number;
   voteBreakdown: ProposicaoInspectionVoteBucket[];
   partyBreakdown: ProposicaoInspectionPartyBucket[];

@@ -21,8 +21,18 @@ cp .env.example .env
 ```
 *(No Windows, você pode simplesmente copiar e colar o arquivo no Explorador de Arquivos e renomeá-lo para `.env`)*
 
-Abra o arquivo `.env` e configure a variável **`DATABASE_URL`** com a URL do seu banco de dados PostgreSQL (pode ser um banco local, Supabase, NeonDB, etc.).
-> ⚠️ **Atenção:** O projeto utiliza busca semântica, o que exige que o PostgreSQL utilizado tenha a extensão **`pgvector`** suportada.
+Configure as variáveis no `.env`:
+
+- **`DATABASE_URL`** — URL do PostgreSQL (local, Supabase, NeonDB, etc.).
+- **`AUTH_SECRET`** — segredo para assinar os tokens de sessão (JWT). Gere um com:
+  ```bash
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ```
+- **`RESEND_API_KEY`** *(opcional)* — chave da [Resend](https://resend.com) para enviar
+  e-mails de redefinição de senha. Sem ela, o link de redefinição é apenas registrado no
+  console do servidor (suficiente para desenvolvimento).
+
+> ⚠️ **Atenção:** O `DATABASE_URL` precisa de um PostgreSQL com a extensão **`pgvector`**.
 
 ### 3. Configurar o Banco de Dados (Prisma)
 
@@ -50,8 +60,10 @@ npx ts-node src/scripts/update-fotos.ts
 # Popula projetos e proposições 
 npx ts-node src/scripts/seed-todas-proposicoes.ts
 
-# Popula presenças, assiduidades e comissões (opcional)
-npx ts-node src/scripts/seed-assiduidade.ts
+# Popula votos parlamentares (resultado definitivo de cada proposição)
+npx ts-node src/scripts/seed-votos.ts
+
+# Popula comissões (opcional)
 npx ts-node src/scripts/seed-comissoes.ts
 ```
 
