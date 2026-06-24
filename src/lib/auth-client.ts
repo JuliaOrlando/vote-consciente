@@ -37,6 +37,15 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" });
 }
 
+export async function deleteAccount(): Promise<{ ok: boolean; error?: string }> {
+  const response = await fetch("/api/auth/me", { method: "DELETE" });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    return { ok: false, error: data.error ?? "Não foi possível excluir a conta." };
+  }
+  return { ok: true };
+}
+
 export async function fetchMe(): Promise<AuthUser | null> {
   try {
     const response = await fetch("/api/auth/me");

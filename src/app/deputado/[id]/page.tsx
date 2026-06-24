@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { BackButton } from "./back-button";
+import { FollowButton } from "./follow-button";
 import { ProfileClientTabs } from "./ProfileClientTabs";
 import { Badge, MetricTile, SurfaceCard } from "@/components/ui";
 import { formatCurrency, formatPercent, getMatchTone } from "@/lib/utils";
@@ -104,6 +105,8 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
                     {deputado.uf}
                   </Badge>
                 </div>
+
+                <FollowButton parlamentarId={deputado.id} />
               </div>
             </div>
           </div>
