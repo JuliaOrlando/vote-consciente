@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { endSession, getSession } from "@/lib/auth";
 
 // Retorna o usuário logado (ou null). Usado pelo cliente para saber o estado de auth.
 export async function GET() {
@@ -43,4 +43,24 @@ export async function PATCH(request: Request) {
   });
 
   return NextResponse.json({ success: true, usuario });
+}
+
+// Exclui a conta do usuário logado e tudo associado a ela.
+export async function DELETE() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+
+  // VotoUsuario não tem cascade no schema; apaga antes. Acompanhamento e
+  // PasswordResetToken têm onDelete: Cascade, mas removemos explicitamente para clareza.
+  await prisma.$transaction([
+    prisma.votoUsuario.deleteMany({ where: { usuarioId: session.userId } }),
+    prisma.acompanhamento.deleteMany({ where: { usuarioId: session.userId } }),
+    prisma.passwordResetToken.deleteMany({ where: { usuarioId: session.userId } }),
+    prisma.usuario.delete({ where: { id: session.userId } }),
+  ]);
+
+  await endSession();
+  return NextResponse.json({ success: true });
 }
