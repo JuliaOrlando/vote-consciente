@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertCircle,
   Camera,
   Check,
+  CheckCircle2,
+  KeyRound,
   Loader2,
   LogOut,
   Pencil,
@@ -19,7 +22,8 @@ import {
 } from "lucide-react";
 import { Badge, buttonStyles, EmptyState, SurfaceCard, SectionIntro } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { fetchMe, logout, updateProfile } from "@/lib/auth-client";
+import { changePassword, fetchMe, logout, updateProfile } from "@/lib/auth-client";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth-validation";
 
 // Tipo para os itens acompanhados — CRUD de objeto principal do usuário
 type ItemAcompanhado = {
@@ -51,6 +55,51 @@ export default function PerfilPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Troca de senha (in-app, exige a senha atual).
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmaSenha, setConfirmaSenha] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const resetPasswordForm = () => {
+    setSenhaAtual("");
+    setNovaSenha("");
+    setConfirmaSenha("");
+    setPasswordError("");
+    setPasswordSuccess(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess(false);
+
+    if (novaSenha.length < MIN_PASSWORD_LENGTH) {
+      setPasswordError(`A nova senha deve ter ao menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (novaSenha !== confirmaSenha) {
+      setPasswordError("As senhas não coincidem.");
+      return;
+    }
+
+    setChangingPassword(true);
+    const result = await changePassword(senhaAtual, novaSenha);
+    setChangingPassword(false);
+
+    if (!result.ok) {
+      setPasswordError(result.error ?? "Não foi possível alterar a senha.");
+      return;
+    }
+    setPasswordSuccess(true);
+    setSenhaAtual("");
+    setNovaSenha("");
+    setConfirmaSenha("");
+  };
 
   // Carrega os dados reais do usuário logado (a rota /perfil é protegida no middleware).
   useEffect(() => {
@@ -235,13 +284,74 @@ export default function PerfilPage() {
           <SurfaceCard className="space-y-3 p-5">
             <p className="text-sm font-semibold text-[color:var(--ink)]">Ações da conta</p>
             <div className="space-y-2">
-              <Link
+              <button
                 id="btn-alterar-senha"
-                href="/recuperar-senha"
+                type="button"
+                onClick={() => {
+                  setShowChangePassword((v) => !v);
+                  resetPasswordForm();
+                }}
                 className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full justify-start" })}
               >
+                <KeyRound className="h-3.5 w-3.5" />
                 Alterar senha
-              </Link>
+              </button>
+
+              {showChangePassword ? (
+                <form onSubmit={handleChangePassword} className="space-y-2 rounded-2xl border border-[color:var(--border)] bg-white p-3">
+                  {passwordSuccess ? (
+                    <div className="flex items-start gap-2 rounded-xl border border-[color:rgba(13,107,100,0.22)] bg-[color:var(--accent-soft)] p-2.5 text-xs text-[color:var(--ink)]">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--accent-strong)]" />
+                      <p>Senha alterada com sucesso.</p>
+                    </div>
+                  ) : null}
+                  {passwordError ? (
+                    <div role="alert" className="flex items-start gap-2 rounded-xl border border-[color:rgba(176,57,38,0.22)] bg-[color:rgba(176,57,38,0.06)] p-2.5 text-xs text-[color:var(--danger-ink)]">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <p>{passwordError}</p>
+                    </div>
+                  ) : null}
+                  <input
+                    id="senha-atual"
+                    type="password"
+                    value={senhaAtual}
+                    onChange={(e) => setSenhaAtual(e.target.value)}
+                    placeholder="Senha atual"
+                    required
+                    autoComplete="current-password"
+                    className="vc-input text-sm"
+                  />
+                  <input
+                    id="nova-senha"
+                    type="password"
+                    value={novaSenha}
+                    onChange={(e) => setNovaSenha(e.target.value)}
+                    placeholder="Nova senha (mín. 8)"
+                    required
+                    minLength={MIN_PASSWORD_LENGTH}
+                    autoComplete="new-password"
+                    className="vc-input text-sm"
+                  />
+                  <input
+                    id="confirma-nova-senha"
+                    type="password"
+                    value={confirmaSenha}
+                    onChange={(e) => setConfirmaSenha(e.target.value)}
+                    placeholder="Confirmar nova senha"
+                    required
+                    autoComplete="new-password"
+                    className="vc-input text-sm"
+                  />
+                  <button
+                    type="submit"
+                    disabled={changingPassword}
+                    className={buttonStyles({ variant: "primary", size: "sm", className: "w-full" })}
+                  >
+                    {changingPassword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    {changingPassword ? "Salvando..." : "Salvar nova senha"}
+                  </button>
+                </form>
+              ) : null}
               <button
                 id="btn-exportar-dados"
                 type="button"

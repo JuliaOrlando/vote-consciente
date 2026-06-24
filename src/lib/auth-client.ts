@@ -59,6 +59,15 @@ export async function updateProfile(nome: string): Promise<AuthResult> {
   return { ok: true, usuario: data.usuario };
 }
 
+export async function changePassword(
+  senhaAtual: string,
+  novaSenha: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { response, data } = await postJson("/api/auth/change-password", { senhaAtual, novaSenha });
+  if (!response.ok) return { ok: false, error: data.error ?? "Não foi possível alterar a senha." };
+  return { ok: true };
+}
+
 export async function requestPasswordReset(email: string): Promise<{ message: string }> {
   const { data } = await postJson("/api/auth/forgot-password", { email });
   return { message: data.message ?? "Se houver uma conta, enviaremos um link." };
