@@ -10,13 +10,29 @@ datasource db {
 }
 
 model Usuario {
-  id               String        @id @default(uuid())
-  email            String?       @unique
-  perfilIdeologico String?       @map("perfil_ideologico")
-  dataCriacao      DateTime      @default(now()) @map("data_criacao")
+  id               String               @id @default(uuid())
+  nome             String?
+  email            String?              @unique
+  senhaHash        String?              @map("senha_hash") // hash bcrypt; null = conta sem senha (ex.: legado)
+  perfilIdeologico String?              @map("perfil_ideologico")
+  dataCriacao      DateTime             @default(now()) @map("data_criacao")
   votos            VotoUsuario[]
+  resetTokens      PasswordResetToken[]
 
   @@map("usuario")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  usuarioId String    @map("usuario_id")
+  tokenHash String    @unique @map("token_hash") // SHA-256 do token enviado por e-mail
+  expiraEm  DateTime  @map("expira_em")
+  usadoEm   DateTime? @map("usado_em")
+  criadoEm  DateTime  @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_token")
 }
 
 model Proposicao {
@@ -50,17 +66,17 @@ model Proposicao {
 }
 
 model Parlamentar {
-  id            Int                     @id
-  nomeEleitoral String                  @map("nome_eleitoral")
+  id            Int               @id
+  nomeEleitoral String            @map("nome_eleitoral")
   partido       String
   uf            String
-  statusMandato String                  @map("status_mandato")
-  urlFoto       String?                 @map("url_foto")
-  matchGlobal   Float?                  @map("match_global")
+  statusMandato String            @map("status_mandato")
+  urlFoto       String?           @map("url_foto")
+  matchGlobal   Float?            @map("match_global")
   // false = parlamentar de legislatura anterior, mantido apenas para aparecer em
   // votações históricas (nome+foto+partido). Não recebe dados completos. Ver
   // vault/data-sources/06_voting_definitive.md.
-  ativo         Boolean                 @default(true)
+  ativo         Boolean           @default(true)
   votos         VotoParlamentar[]
   despesas      Despesa[]
   comissoes     CargoComissao[]
@@ -138,14 +154,14 @@ model Despesa {
 // em `db push`. Sem relação/FK de propósito para não alterar a tabela existente.
 // Não usada pelo código deste app. Ver vault/data-sources/06_voting_definitive.md.
 model Votacao {
-  id           String    @id
-  proposicaoId Int       @map("proposicao_id")
+  id           String   @id
+  proposicaoId Int      @map("proposicao_id")
   descricao    String
   tipo         String?
-  dataHoraVoto DateTime  @map("data_hora_voto")
-  votosNao     Int       @map("votos_nao")
-  votosOutros  Int       @map("votos_outros")
-  votosSim     Int       @map("votos_sim")
+  dataHoraVoto DateTime @map("data_hora_voto")
+  votosNao     Int      @map("votos_nao")
+  votosOutros  Int      @map("votos_outros")
+  votosSim     Int      @map("votos_sim")
   orgao        String?
 
   @@map("votacao")

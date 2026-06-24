@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Camera,
   Check,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { Badge, buttonStyles, EmptyState, SurfaceCard, SectionIntro } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { fetchMe, logout, updateProfile } from "@/lib/auth-client";
 
 // Tipo para os itens acompanhados — CRUD de objeto principal do usuário
 type ItemAcompanhado = {
@@ -37,16 +39,32 @@ const ITENS_INICIAIS: ItemAcompanhado[] = [
 
 // Tela de perfil com CRUD de itens acompanhados e upload de foto — placeholder
 export default function PerfilPage() {
+  const router = useRouter();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [nome, setNome] = useState("Cidadão Ativo");
-  const [email] = useState("usuario@exemplo.com");
-  const [nomeEdit, setNomeEdit] = useState(nome);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [nomeEdit, setNomeEdit] = useState("");
   const [itens, setItens] = useState<ItemAcompanhado[]>(ITENS_INICIAIS);
   const [novoItem, setNovoItem] = useState("");
   const [addingItem, setAddingItem] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Carrega os dados reais do usuário logado (a rota /perfil é protegida no middleware).
+  useEffect(() => {
+    let active = true;
+    fetchMe().then((usuario) => {
+      if (!active || !usuario) return;
+      setNome(usuario.nome ?? "Sem nome");
+      setNomeEdit(usuario.nome ?? "");
+      setEmail(usuario.email ?? "");
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,14 +74,22 @@ export default function PerfilPage() {
     reader.readAsDataURL(file);
   };
 
-  // Simula salvar perfil (Update)
-  const handleSaveProfile = () => {
+  // Salva o nome do perfil na conta (Update).
+  const handleSaveProfile = async () => {
     setSavingProfile(true);
-    setTimeout(() => {
-      setNome(nomeEdit);
+    const result = await updateProfile(nomeEdit);
+    if (result.ok) {
+      setNome(result.usuario.nome ?? nomeEdit);
       setIsEditingProfile(false);
-      setSavingProfile(false);
-    }, 1200);
+    }
+    setSavingProfile(false);
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await logout();
+    router.push("/login");
+    router.refresh();
   };
 
   // Adiciona item à lista (Create)
@@ -209,13 +235,13 @@ export default function PerfilPage() {
           <SurfaceCard className="space-y-3 p-5">
             <p className="text-sm font-semibold text-[color:var(--ink)]">Ações da conta</p>
             <div className="space-y-2">
-              <button
+              <Link
                 id="btn-alterar-senha"
-                type="button"
+                href="/recuperar-senha"
                 className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full justify-start" })}
               >
                 Alterar senha
-              </button>
+              </Link>
               <button
                 id="btn-exportar-dados"
                 type="button"
@@ -237,14 +263,16 @@ export default function PerfilPage() {
               </button>
             </div>
             <div className="border-t border-[color:var(--border)] pt-2">
-              <Link
-                href="/login"
+              <button
+                type="button"
                 id="btn-sair"
+                onClick={handleLogout}
+                disabled={loggingOut}
                 className={buttonStyles({ variant: "ghost", size: "sm", className: "w-full justify-start text-[color:var(--ink-muted)]" })}
               >
-                <LogOut className="h-3.5 w-3.5" />
+                {loggingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
                 Sair da conta
-              </Link>
+              </button>
             </div>
           </SurfaceCard>
         </div>
