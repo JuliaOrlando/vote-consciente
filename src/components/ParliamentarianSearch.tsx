@@ -149,6 +149,10 @@ function SearchResultRow({ parlamentar }: { parlamentar: Parlamentar }) {
 }
 
 export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVariant }) {
+  // Senado ainda não tem base sincronizada. Mantemos toda a lógica de "casa"
+  // (deputados/senadores) pronta para o futuro, mas o alternador fica oculto
+  // enquanto a flag estiver desligada. Basta ligá-la quando o Senado entrar.
+  const SENADO_HABILITADO = false;
   const [casa, setCasa] = useState<"deputados" | "senadores">("deputados");
   const [query, setQuery] = useState("");
   const [estado, setEstado] = useState("all");
@@ -248,6 +252,7 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
               Busca de parlamentares
             </legend>
 
+            {SENADO_HABILITADO ? (
             <div className="inline-flex w-full rounded-full border border-[color:var(--border)] bg-white p-1 sm:w-auto">
               <button
                 type="button"
@@ -282,6 +287,7 @@ export function ParliamentarianSearch({ variant = "home" }: { variant?: SearchVa
                 Senadores
               </button>
             </div>
+            ) : null}
 
             <div className="relative">
               <label htmlFor="search-query" className="sr-only">

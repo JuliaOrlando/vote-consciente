@@ -302,7 +302,10 @@ async function syncPropositionVotes(proposition: CandidateProposition): Promise<
     const definitiveVote = await selectDefinitiveVote(proposition.id);
 
     if (!definitiveVote) {
-      // Nível 3: nenhuma votação nominal. Registra que não há votação.
+      // Nível 3: nenhuma votação nominal. Registra que não há votação e limpa
+      // eventuais votos antigos das duas tabelas.
+      await prisma.votoParlamentar.deleteMany({ where: { proposicaoId: proposition.id } });
+      await prisma.votoParlamentarTramitacao.deleteMany({ where: { proposicaoId: proposition.id } });
       await prisma.proposicao.update({
         where: { id: proposition.id },
         data: { votacaoId: null, votacaoStage: null, votacaoFinalizada: false, votacaoData: null },
@@ -313,30 +316,30 @@ async function syncPropositionVotes(proposition: CandidateProposition): Promise<
     const votingDate = new Date(definitiveVote.votingDate);
     let inserted = 0;
 
+    // Votos definitivos vão para `voto_parlamentar`; em tramitação, para
+    // `voto_parlamentar_tramitacao`. Antes de gravar, limpa a outra tabela para
+    // o caso de a proposição ter mudado de estágio entre execuções do seed.
+    if (definitiveVote.finalizada) {
+      await prisma.votoParlamentarTramitacao.deleteMany({ where: { proposicaoId: proposition.id } });
+    } else {
+      await prisma.votoParlamentar.deleteMany({ where: { proposicaoId: proposition.id } });
+    }
+
     for (const record of definitiveVote.records) {
       const parlamentarId = record.deputado_?.id;
       if (!Number.isFinite(parlamentarId)) continue;
 
       try {
         await ensureParlamentar(record);
-        await prisma.votoParlamentar.upsert({
-          where: {
-            parlamentarId_proposicaoId: {
-              parlamentarId,
-              proposicaoId: proposition.id,
-            },
-          },
-          update: {
-            voto: normalizeVote(record.tipoVoto),
-            dataVoto: votingDate,
-          },
-          create: {
-            parlamentarId,
-            proposicaoId: proposition.id,
-            voto: normalizeVote(record.tipoVoto),
-            dataVoto: votingDate,
-          },
-        });
+        const data = { voto: normalizeVote(record.tipoVoto), dataVoto: votingDate };
+        const where = { parlamentarId_proposicaoId: { parlamentarId, proposicaoId: proposition.id } };
+        const create = { parlamentarId, proposicaoId: proposition.id, ...data };
+
+        if (definitiveVote.finalizada) {
+          await prisma.votoParlamentar.upsert({ where, update: data, create });
+        } else {
+          await prisma.votoParlamentarTramitacao.upsert({ where, update: data, create });
+        }
         inserted++;
       } catch {
         // Registros sem id válido continuam sendo ignorados.
@@ -397,7 +400,10 @@ async function seedVotes() {
     // não a definitiva) e estão misturados entre sessões. Apaga tudo para recoletar
     // de forma correta. Ver vault/data-sources/06_voting_definitive.md.
     const removed = await prisma.votoParlamentar.deleteMany({});
-    console.log(`🧹 --reseed: ${removed.count} votos antigos (potencialmente incorretos) removidos.`);
+    const removedTramitacao = await prisma.votoParlamentarTramitacao.deleteMany({});
+    console.log(
+      `🧹 --reseed: ${removed.count} votos definitivos e ${removedTramitacao.count} votos em tramitação removidos.`
+    );
   }
 
   console.log("\n====================================================");

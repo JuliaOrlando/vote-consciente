@@ -6,12 +6,12 @@ async function limpaProposicoesOrfas() {
     console.log("🧹 Iniciando Faxina no Banco de Dados...");
 
     try {
-        // Encontra proposições que possuem zero relação na tabela de Votos
+        // Encontra proposições sem qualquer voto registrado — nem definitivo
+        // (voto_parlamentar) nem em tramitação (voto_parlamentar_tramitacao).
         const resultado = await prisma.proposicao.deleteMany({
             where: {
-                votosParlamentar: {
-                    none: {}
-                }
+                votosParlamentar: { none: {} },
+                votosTramitacao: { none: {} }
             }
         });
 

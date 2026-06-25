@@ -19,23 +19,27 @@ const getCachedInspection = unstable_cache(
       return null;
     }
 
-    const nominalVotes = await prisma.votoParlamentar.findMany({
-      where: { proposicaoId },
-      select: {
-        voto: true,
-        dataVoto: true,
-        parlamentar: {
-          select: {
-            id: true,
-            nomeEleitoral: true,
-            partido: true,
-            uf: true,
-            urlFoto: true,
-            ativo: true,
-          },
+    // Votos definitivos vivem em `voto_parlamentar`; votos de proposições ainda
+    // em tramitação ficam em `voto_parlamentar_tramitacao`. Lemos da tabela certa
+    // conforme o estágio da votação para exibir o último resultado disponível.
+    const voteSelect = {
+      voto: true,
+      dataVoto: true,
+      parlamentar: {
+        select: {
+          id: true,
+          nomeEleitoral: true,
+          partido: true,
+          uf: true,
+          urlFoto: true,
+          ativo: true,
         },
       },
-    });
+    } as const;
+
+    const nominalVotes = proposition.votacaoFinalizada
+      ? await prisma.votoParlamentar.findMany({ where: { proposicaoId }, select: voteSelect })
+      : await prisma.votoParlamentarTramitacao.findMany({ where: { proposicaoId }, select: voteSelect });
 
     const totalDeputyVotes = nominalVotes.length;
 
