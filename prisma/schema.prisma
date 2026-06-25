@@ -70,10 +70,11 @@ model Proposicao {
   votacaoStage      String?                      @map("votacao_stage") // descrição/etapa da sessão exibida
   votacaoFinalizada Boolean                      @default(false) @map("votacao_finalizada")
   votacaoData       DateTime?                    @map("votacao_data")
-  // Using Unsupported for pgvector type. Prisma supports it via raw queries.
-  embedding         Unsupported("vector(1536)")?
   votosUsuarios     VotoUsuario[]
   votosParlamentar  VotoParlamentar[]
+  // Votos de sessões ainda em tramitação (resultado NÃO definitivo). Ficam em
+  // tabela separada para não poluir o cálculo de match nem os votos definitivos.
+  votosTramitacao   VotoParlamentarTramitacao[]
   autores           ProposicaoAutor[]
 
   @@map("proposicao")
@@ -92,6 +93,7 @@ model Parlamentar {
   // vault/data-sources/06_voting_definitive.md.
   ativo         Boolean           @default(true)
   votos         VotoParlamentar[]
+  votosTramitacao VotoParlamentarTramitacao[]
   despesas      Despesa[]
   comissoes     CargoComissao[]
   proposicoes   ProposicaoAutor[]
@@ -151,6 +153,24 @@ model VotoParlamentar {
 
   @@unique([parlamentarId, proposicaoId])
   @@map("voto_parlamentar")
+}
+
+// Mesma estrutura de VotoParlamentar, porém para proposições cuja votação ainda
+// NÃO é definitiva (votacaoFinalizada = false). Separada para que o match e a
+// exibição de resultados definitivos leiam somente votos finais. A página da
+// proposição lê desta tabela quando a votação está em tramitação.
+model VotoParlamentarTramitacao {
+  id            String   @id @default(uuid())
+  parlamentarId Int      @map("parlamentar_id")
+  proposicaoId  Int      @map("proposicao_id")
+  voto          String // SIM, NAO, ABSTENCAO, OBSTRUCAO, ARTIGO 17
+  dataVoto      DateTime @map("data_voto")
+
+  parlamentar Parlamentar @relation(fields: [parlamentarId], references: [id])
+  proposicao  Proposicao  @relation(fields: [proposicaoId], references: [id])
+
+  @@unique([parlamentarId, proposicaoId])
+  @@map("voto_parlamentar_tramitacao")
 }
 
 model Despesa {

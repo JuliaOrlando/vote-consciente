@@ -1,10 +1,31 @@
 # Vote Consciente
 
-Um projeto Next.js que ajuda a acompanhar e investigar a atuação, votos e proposições dos deputados federais brasileiros.
+Aplicação web para acompanhar e investigar a atuação dos deputados federais brasileiros — votos, proposições, gastos e comissões — com base nos dados oficiais da Câmara dos Deputados.
 
-## 🚀 Como rodar o projeto localmente
+## O problema
 
-### 1. Clonar o repositório e instalar dependências
+Os dados de votações, gastos e proposições da Câmara são públicos, mas vivem em uma API técnica e em fichas de tramitação difíceis de ler. Na prática, o eleitor não tem como saber, de forma simples, como o deputado que ajudou a eleger realmente votou nos temas que importam para ele. Sem isso, cobrar representação vira opinião, não fato.
+
+## O que a aplicação faz
+
+Reúne os dados oficiais em um só lugar e os torna legíveis:
+
+- **Perfil do parlamentar** — votos, proposições de autoria, gastos da cota parlamentar e comissões.
+- **Meu Match** — você responde como votaria em proposições reais e o app calcula sua afinidade com cada deputado, projeto a projeto, mostrando onde vocês concordam ou divergem.
+- **Acompanhar** — siga deputados específicos e centralize o que interessa no seu perfil.
+
+A premissa é honestidade de dados: só aparece o que tem origem oficial e verificável. Votações sem resultado definitivo são marcadas como provisórias, e nenhum número é estimado ou inventado para preencher lacunas.
+
+## Stack
+
+- **Next.js** (App Router) + **React** + **TypeScript**
+- **Prisma ORM** + **PostgreSQL**
+- **Tailwind CSS**
+- Autenticação própria por e-mail/senha (bcrypt + JWT em cookie `httpOnly`)
+
+## Rodando localmente
+
+### 1. Instalar
 
 ```bash
 git clone https://github.com/JuliaOrlando/vote-consciente.git
@@ -12,73 +33,46 @@ cd vote-consciente
 npm install
 ```
 
-### 2. Configurar Variáveis de Ambiente
-
-Crie um arquivo `.env` na raiz do projeto, baseado no `.env.example`:
+### 2. Variáveis de ambiente
 
 ```bash
 cp .env.example .env
 ```
-*(No Windows, você pode simplesmente copiar e colar o arquivo no Explorador de Arquivos e renomeá-lo para `.env`)*
 
-Configure as variáveis no `.env`:
-
-- **`DATABASE_URL`** — URL do PostgreSQL (local, Supabase, NeonDB, etc.).
-- **`AUTH_SECRET`** — segredo para assinar os tokens de sessão (JWT). Gere um com:
+- **`DATABASE_URL`** — conexão PostgreSQL (local, Neon, Supabase, etc.).
+- **`AUTH_SECRET`** — segredo para assinar as sessões. Gere um com:
   ```bash
   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
   ```
-- **`RESEND_API_KEY`** *(opcional)* — chave da [Resend](https://resend.com) para enviar
-  e-mails de redefinição de senha. Sem ela, o link de redefinição é apenas registrado no
-  console do servidor (suficiente para desenvolvimento).
+- **`RESEND_API_KEY`** *(opcional)* — envio real dos e-mails de redefinição de senha via [Resend](https://resend.com). Sem ela, o link é apenas impresso no console do servidor (suficiente em desenvolvimento).
 
-> ⚠️ **Atenção:** O `DATABASE_URL` precisa de um PostgreSQL com a extensão **`pgvector`**.
-
-### 3. Configurar o Banco de Dados (Prisma)
-
-Com o banco de dados rodando e a URL configurada, instale o Prisma e sincronize a estrutura:
+### 3. Banco de dados
 
 ```bash
-# Gera o Client do Prisma
 npx prisma generate
-
-# Empurra o schema (tabelas e extensões) pro banco de dados
 npx prisma db push
 ```
 
-### 4. Popular o banco de dados (Seeding)
+### 4. Popular com dados reais
 
-Para o aplicativo funcionar com dados reais, utilizamos os scripts que extraem dados da API da Câmara e das demais fontes. Você pode executá-los em sequência:
+Os scripts extraem dados da API da Câmara. Rode na ordem:
 
 ```bash
-# Baixa e popula políticos
-npx ts-node src/scripts/seed-deputados.ts
-
-# Carrega e atualiza as fotos
-npx ts-node src/scripts/update-fotos.ts
-
-# Popula projetos e proposições 
-npx ts-node src/scripts/seed-todas-proposicoes.ts
-
-# Popula votos parlamentares (resultado definitivo de cada proposição)
-npx ts-node src/scripts/seed-votos.ts
-
-# Popula comissões (opcional)
-npx ts-node src/scripts/seed-comissoes.ts
+npx ts-node src/scripts/seed-deputados.ts          # deputados
+npx ts-node src/scripts/update-fotos.ts            # fotos
+npx ts-node src/scripts/seed-todas-proposicoes.ts  # proposições
+npx ts-node src/scripts/seed-votos.ts              # votos (resultado definitivo de cada proposição)
+npx ts-node src/scripts/seed-comissoes.ts          # comissões (opcional)
 ```
 
-### 5. Iniciar o servidor
+### 5. Rodar
 
 ```bash
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000) no seu navegador. O projeto estará rodando 🚀.
+Disponível em [http://localhost:3000](http://localhost:3000).
 
----
+## Dados
 
-## 🛠️ Tecnologias Principais
-- [Next.js](https://nextjs.org/) (App Router)
-- [Prisma ORM](https://www.prisma.io/)
-- [PostgreSQL](https://www.postgresql.org/) + `pgvector`
-- [Tailwind CSS](https://tailwindcss.com/)
+Fonte única: [API de Dados Abertos da Câmara dos Deputados](https://dadosabertos.camara.leg.br/). Os votos exibidos e o cálculo de afinidade usam apenas o resultado definitivo de cada proposição; votações ainda em tramitação ficam armazenadas à parte e são sinalizadas como provisórias.

@@ -1,6 +1,5 @@
 import Image from "next/image";
 import {
-  BadgeCheck,
   FileText,
   Landmark,
   MapPin,
@@ -12,7 +11,7 @@ import { BackButton } from "./back-button";
 import { FollowButton } from "./follow-button";
 import { ProfileClientTabs } from "./ProfileClientTabs";
 import { Badge, MetricTile, SurfaceCard } from "@/components/ui";
-import { formatCurrency, formatPercent, getMatchTone } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 export default async function DeputadoPerfilPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -58,7 +57,6 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
   }
 
   const totalDespesas = deputado.despesas.reduce((acc, item) => acc + item.valor, 0);
-  const matchScore = deputado.matchGlobal ?? 78.4;
   const comissaoPrincipal = deputado.comissoes[0];
 
   return (
@@ -112,40 +110,20 @@ export default async function DeputadoPerfilPage({ params }: { params: Promise<{
           </div>
 
           <div className="min-w-0 space-y-5 p-5 sm:p-7">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="min-w-0 space-y-3">
-                <h2 className="text-xl font-semibold text-[color:var(--ink)]">Resumo do perfil</h2>
-                <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
-                  Confira primeiro afinidade, gastos declarados e atividade em comissões e projetos.
-                </p>
-                {comissaoPrincipal ? (
-                  <div className="vc-panel">
-                    <p className="text-sm font-semibold text-[color:var(--ink)]">Atuação institucional recente</p>
-                    <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
-                      {comissaoPrincipal.tituloCargo} em {comissaoPrincipal.orgao}
-                      {comissaoPrincipal.dataInicio ? ` desde ${new Intl.DateTimeFormat("pt-BR").format(comissaoPrincipal.dataInicio)}` : ""}.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="vc-panel min-w-0 flex flex-col gap-3">
-                <p className="text-sm font-medium text-[color:var(--ink-muted)]">Afinidade estimada</p>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-display text-5xl font-semibold leading-none text-[color:var(--ink)]">
-                      {formatPercent(matchScore, 1)}
-                    </p>
-                    <p className="mt-2 text-sm text-[color:var(--ink-soft)]">
-                      {deputado.matchGlobal ? "Baseado no cálculo disponível do app." : "Valor provisório até a simulação do usuário."}
-                    </p>
-                  </div>
-                  <Badge tone={getMatchTone(matchScore)} className="max-w-full self-start">
-                    <BadgeCheck className="h-3.5 w-3.5" />
-                    {matchScore >= 75 ? "Alta afinidade" : matchScore >= 50 ? "Afinidade moderada" : "Baixa afinidade"}
-                  </Badge>
+            <div className="min-w-0 space-y-3">
+              <h2 className="text-xl font-semibold text-[color:var(--ink)]">Resumo do perfil</h2>
+              <p className="text-sm leading-7 text-[color:var(--ink-muted)]">
+                Confira gastos declarados e atividade em comissões e projetos.
+              </p>
+              {comissaoPrincipal ? (
+                <div className="vc-panel">
+                  <p className="text-sm font-semibold text-[color:var(--ink)]">Atuação institucional recente</p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
+                    {comissaoPrincipal.tituloCargo} em {comissaoPrincipal.orgao}
+                    {comissaoPrincipal.dataInicio ? ` desde ${new Intl.DateTimeFormat("pt-BR").format(comissaoPrincipal.dataInicio)}` : ""}.
+                  </p>
                 </div>
-              </div>
+              ) : null}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

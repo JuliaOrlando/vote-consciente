@@ -7,7 +7,12 @@ const getCachedProposicoes = unstable_cache(
     prisma.proposicao.findMany({
       where: {
         autores: { some: {} },
-        votosParlamentar: { some: {} },
+        // Inclui proposições com votos definitivos OU com votos ainda em
+        // tramitação, para que as votações em andamento continuem na lista.
+        OR: [
+          { votosParlamentar: { some: {} } },
+          { votosTramitacao: { some: {} } },
+        ],
       },
       select: {
         id: true,

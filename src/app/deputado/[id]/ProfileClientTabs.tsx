@@ -8,7 +8,6 @@ import {
   Loader2,
   ReceiptText,
   Search,
-  Sparkles,
 } from "lucide-react";
 import { DespesasChart } from "./chart-client";
 import { Badge, EmptyState, MetricTile, SurfaceCard, buttonStyles } from "@/components/ui";
@@ -16,7 +15,6 @@ import {
   cn,
   formatCurrency,
   formatDate,
-  formatPercent,
   getProjectStatusTone,
 } from "@/lib/utils";
 
@@ -221,13 +219,6 @@ export function ProfileClientTabs({ deputado }: { deputado: DeputadoProfileData 
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 md:gap-4">
-                <MetricTile
-                  icon={Sparkles}
-                  label="Afinidade exibida"
-                  value={formatPercent(deputado.matchGlobal ?? 78.4, 1)}
-                  description="Sinal rápido para comparação com o seu posicionamento quando disponível."
-                  tone="primary"
-                />
                 <MetricTile
                   icon={FileText}
                   label="Projetos encontrados"

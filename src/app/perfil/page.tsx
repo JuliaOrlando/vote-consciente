@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
-  Camera,
   Check,
   CheckCircle2,
   Download,
@@ -29,7 +28,6 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/auth-validation";
 // Tela de perfil: dados reais do usuário logado, parlamentares acompanhados e ações da conta.
 export default function PerfilPage() {
   const router = useRouter();
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -40,7 +38,6 @@ export default function PerfilPage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Troca de senha (in-app, exige a senha atual).
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -105,14 +102,6 @@ export default function PerfilPage() {
       active = false;
     };
   }, []);
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  };
 
   // Salva o nome do perfil na conta (Update).
   const handleSaveProfile = async () => {
@@ -185,45 +174,11 @@ export default function PerfilPage() {
         {/* Coluna esquerda — dados pessoais */}
         <div className="space-y-4 min-w-0">
           <SurfaceCard className="space-y-5 p-5 sm:p-6 min-w-0">
-            {/* Avatar com upload */}
+            {/* Avatar — ícone padrão para todos os usuários. */}
             <div className="flex flex-col items-center gap-4">
-              <div className="relative">
-                <div className="relative h-28 w-28 overflow-hidden rounded-[28px] border-2 border-[color:rgba(13,107,100,0.2)] bg-[color:var(--accent-soft)] shadow-[0_16px_32px_-24px_rgba(13,107,100,0.4)]">
-                  {avatarPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar do usuário"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[color:var(--accent-strong)]">
-                      <Users className="h-10 w-10" />
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  id="btn-alterar-foto"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--border)] bg-white text-[color:var(--ink-muted)] shadow-sm transition-colors hover:border-[color:rgba(13,107,100,0.22)] hover:text-[color:var(--accent-strong)]"
-                  aria-label="Alterar foto de perfil"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
+              <div className="flex h-28 w-28 items-center justify-center rounded-[28px] border-2 border-[color:rgba(13,107,100,0.2)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] shadow-[0_16px_32px_-24px_rgba(13,107,100,0.4)]">
+                <Users className="h-10 w-10" />
               </div>
-              <input
-                ref={fileInputRef}
-                id="perfil-avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="sr-only"
-                aria-label="Selecionar nova foto de perfil"
-              />
-              <p className="text-center text-xs text-[color:var(--ink-soft)]">
-                Clique no ícone para alterar a foto
-              </p>
             </div>
 
             {/* Dados do usuário */}
